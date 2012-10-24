@@ -1,0 +1,427 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"P",
+				"players	[]*Player ν"
+			],
+			[
+				"C",
+				"Conn	interface ¡"
+			],
+			[
+				"e",
+				"Exit	 ƒ"
+			],
+			[
+				"Prin",
+				"Println	n int, err error ƒ"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "main.go",
+			"settings":
+			{
+				"buffer_size": 162,
+				"line_ending": "Unix",
+				"name": "package main"
+			}
+		},
+		{
+			"file": "game.go",
+			"settings":
+			{
+				"buffer_size": 311,
+				"line_ending": "Unix",
+				"name": "package main"
+			}
+		},
+		{
+			"file": "/home/belak/broids/game.go",
+			"settings":
+			{
+				"buffer_size": 2678,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "player.go",
+			"settings":
+			{
+				"buffer_size": 133,
+				"line_ending": "Unix",
+				"name": "package main"
+			}
+		},
+		{
+			"file": "entity.go",
+			"settings":
+			{
+				"buffer_size": 212,
+				"line_ending": "Unix",
+				"name": "package main"
+			}
+		},
+		{
+			"file": "frame.go",
+			"settings":
+			{
+				"buffer_size": 127,
+				"line_ending": "Unix",
+				"name": "package main"
+			}
+		}
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 72.0,
+		"selected_items":
+		[
+			[
+				"Package Control: in",
+				"Package Control: Install Package"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"",
+				"GoSublime: Activate GsCommander"
+			],
+			[
+				"ins",
+				"Package Control: Install Package"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 449.0
+	},
+	"console":
+	{
+		"height": 157.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/home/belak/bs/player.go",
+		"/home/belak/bs/entity.go",
+		"/home/belak/bs/frame.go",
+		"/home/belak/bs/game.go",
+		"/home/belak/.config/sublime-text-2/Packages/Default/Preferences.sublime-settings",
+		"/home/belak/.config/sublime-text-2/Packages/User/Preferences.sublime-settings",
+		"/home/belak/.config/sublime-text-2/Packages/GoSublime/CHANGELOG.md",
+		"/home/belak/.config/sublime-text-2/Packages/User/GoSublime.sublime-settings",
+		"/home/belak/.config/sublime-text-2/Packages/GoSublime/GoSublime.sublime-settings",
+		"/C/Users/Kaleb/Desktop/broids/player.go",
+		"/C/Users/Kaleb/AppData/Roaming/Sublime Text 2/Packages/GoSublime/CHANGELOG.md",
+		"/C/Users/Kaleb/AppData/Roaming/Sublime Text 2/Packages/User/GoSublime.sublime-settings",
+		"/home/belak/broids/broids.sublime-project",
+		"/home/belak/libcoded/manage.py",
+		"/home/belak/libcoded/books/admin.py",
+		"/home/belak/libcoded/books/models.py",
+		"/home/belak/libcoded/books/tests.py",
+		"/home/belak/libcoded/books/views.py",
+		"/home/belak/libcoded/libcoded/urls.py",
+		"/home/belak/libcoded/libcoded/settings.py"
+	],
+	"find":
+	{
+		"height": 36.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"theme",
+			"	\n",
+			"ignore",
+			"    ",
+			"admin"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": true,
+		"replace_history":
+		[
+			"\\t"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "main.go",
+					"settings":
+					{
+						"buffer_size": 162,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								12,
+								12
+							]
+						],
+						"settings":
+						{
+							"auto_name": "package main",
+							"syntax": "Packages/Go/Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "game.go",
+					"settings":
+					{
+						"buffer_size": 311,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								157,
+								157
+							]
+						],
+						"settings":
+						{
+							"auto_name": "package main",
+							"syntax": "Packages/Go/Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/home/belak/broids/game.go",
+					"settings":
+					{
+						"buffer_size": 2678,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								286,
+								286
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Go/Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "player.go",
+					"settings":
+					{
+						"buffer_size": 133,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								72,
+								72
+							]
+						],
+						"settings":
+						{
+							"auto_name": "package main",
+							"syntax": "Packages/Go/Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "entity.go",
+					"settings":
+					{
+						"buffer_size": 212,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								190,
+								190
+							]
+						],
+						"settings":
+						{
+							"auto_name": "package main",
+							"syntax": "Packages/Go/Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "frame.go",
+					"settings":
+					{
+						"buffer_size": 127,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								113,
+								113
+							]
+						],
+						"settings":
+						{
+							"auto_name": "package main",
+							"syntax": "Packages/Go/Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 33.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 102.0
+	},
+	"output.gscommander://C:\\Users\\Kaleb\\Desktop\\broids":
+	{
+		"height": 383.0
+	},
+	"replace":
+	{
+		"height": 64.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"selected_items":
+		[
+			[
+				"",
+				"/home/belak/broids/broids.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 168.0,
+	"status_bar_visible": true
+}
