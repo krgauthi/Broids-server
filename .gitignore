@@ -1,2 +1,6 @@
 bs
 Broids-Server
+*.class
+example/build
+example/dist
+broids.sublime-workspace
