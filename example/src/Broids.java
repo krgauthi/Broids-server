@@ -28,7 +28,9 @@ class Broids {
 					// Since we know we have an object, lets do what we need to with it
 					JsonObject obj = element.getAsJsonObject();
 
-					JsonElement e = obj.get("t"); // Type
+					JsonElement e;
+					
+					e = obj.get("t"); // Type
 					if (e.isJsonPrimitive()) {
 						// Now that we know it's a primitive, we know it's safe(ish) to continue
 						int type = e.getAsInt();
@@ -37,6 +39,55 @@ class Broids {
 						} else if (type == FRAME_DELTA) {
 							System.out.println("Delta");
 						}
+					}
+					e = obj.get("gt");
+					if (e.isJsonPrimitive()) {
+						int type = e.getAsInt();
+						System.out.println("Gametype-gt =" +type);
+						}
+					
+					JsonArray eArray;
+					eArray = obj.get("d");
+					Iterator<JsonElement> dataArray = eArray.iterator();
+
+					while(dataArray.hasNext()){
+						if(dataArray.next().getAsInt().equals("t")){
+							int ActionType = dataArray.next().getAsInt();
+							System.out.println("ActionType-t =" + ActionType);
+						}
+						if(dataArray.getAsInt.equals("e")){
+							entityArray = dataArray.getAsJsonArray();
+							Iterator<JsonElement> entityArray = entityA.iterator();
+							while(entityArray.hasNext()){
+								if (entityArray.next().equals("id")) {
+									String id = entityArray.next();
+									System.out.println("d.e.id Id-id =" +id);
+								}
+								if(entityArray.next().equals("t")){
+									int type = entityArray.next();
+									System.out.println("d.e.type Type-t =" + type);
+								}
+								if(entityArray.next().equals("x")){
+								   float xPos = entityArray.next();
+								   System.out.println("d.e.x xPos-x =" +xPos);
+								}
+								if(entityArray.next().equals("y")){
+								   float yPos = entityArray.next();
+								   System.out.println("d.e.y yPos-y =" +yPos);
+								}
+								if(entityArray.next().equals("d")){
+								   float dPos = entityArray.next();
+								   System.out.println("d.e.d dPos-d =" +dPos);
+								}
+								if(entityArray.next().equals("v")){
+								   float vPos = entityArray.next();
+								   System.out.println("d.e.v vPos-v =" +vPos);
+								}
+
+							entityArray = entityArray.next();
+							}
+						}	
+					dataArray = dataArray.next();	
 					}
 				}
 			}
