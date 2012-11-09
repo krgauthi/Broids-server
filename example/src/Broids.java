@@ -25,57 +25,54 @@ class Broids {
 			JsonElement element;
 			while (parser.hasNext()) {
 				element = parser.next();
-				if (element.isJsonObject()) {
-					// Since we know we have an object, lets do what we need to with it
-					JsonObject obj = element.getAsJsonObject();
 
-					JsonElement e;
+				// Since we know we have an object, lets do what we need to with it
+				JsonObject obj = element.getAsJsonObject();
+
+				JsonElement e;
+				
+				e = obj.get("t"); // Type
+				int frameType = e.getAsInt();
+				if (frameType == FRAME_SYNC) {
+					System.out.println("Sync");
+				} else if (frameType == FRAME_DELTA) {
+					System.out.println("Delta");
+				}
+				
+				e = obj.get("gt");
+				int time = e.getAsInt();
+				System.out.println("Gametime-gt  = " + time);
+				
+				JsonArray eArray;
+				e = obj.get("d");
+				eArray = e.getAsJsonArray();
+
+				for(JsonElement d : eArray){
+					JsonObject inner = d.getAsJsonObject();
 					
-					e = obj.get("t"); // Type
-					int frameType = e.getAsInt();
-					if (frameType == FRAME_SYNC) {
-						System.out.println("Sync");
-					} else if (frameType == FRAME_DELTA) {
-						System.out.println("Delta");
-					}
+					int actionType = inner.get("t").getAsInt();
+					System.out.println("ActionType-t = " + actionType);
 					
-					e = obj.get("gt");
-					int time = e.getAsInt();
-					System.out.println("Gametime-gt  = " + time);
-					
-					JsonArray eArray;
-					e = obj.get("d");
-					eArray = e.getAsJsonArray();
-					Iterator<JsonElement> dataArray = eArray.iterator();
+					JsonObject entity = inner.get("e").getAsJsonObject();
 
-					while(dataArray.hasNext()){
-						e = dataArray.next();
-						JsonObject inner = e.getAsJsonObject();
-						
-						int actionType = inner.get("t").getAsInt();
-						System.out.println("ActionType-t = " + actionType);
-						
-						JsonObject entity = inner.get("e").getAsJsonObject();
+					String id = entity.get("id").getAsString();
+					System.out.println("d.e.id Id-id = " +id);
 
-						String id = entity.get("id").getAsString();
-						System.out.println("d.e.id Id-id = " +id);
+					int entityType = entity.get("t").getAsInt();
+					System.out.println("d.e.t Type-t = " + entityType);
 
-						int entityType = entity.get("t").getAsInt();
-						System.out.println("d.e.t Type-t = " + entityType);
+					float xPos = entity.get("x").getAsFloat();
+					System.out.println("d.e.x xPos-x = " +xPos);
 
-						float xPos = entity.get("x").getAsFloat();
-						System.out.println("d.e.x xPos-x = " +xPos);
+					float yPos = entity.get("y").getAsFloat();
+					System.out.println("d.e.y yPos-y = " +yPos);
 
-						float yPos = entity.get("y").getAsFloat();
-						System.out.println("d.e.y yPos-y = " +yPos);
+					float dPos = entity.get("d").getAsFloat();
+					System.out.println("d.e.d dPos-d = " +dPos);
 
-						float dPos = entity.get("d").getAsFloat();
-						System.out.println("d.e.d dPos-d = " +dPos);
+					float vPos = entity.get("v").getAsFloat();
+					System.out.println("d.e.v vPos-v = " +vPos);
 
-						float vPos = entity.get("v").getAsFloat();
-						System.out.println("d.e.v vPos-v = " +vPos);
-
-					}
 				}
 			}
 		} catch (UnknownHostException e) {
