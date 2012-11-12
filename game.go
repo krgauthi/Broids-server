@@ -2,65 +2,130 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"net"
-	"strconv"
 	"sync"
 	"time"
 )
 
 type Game struct {
-	Name         string
-	MaxPlayers   int
-	LastId       int
-	GameTime     int
-	MapX         float32
-	Mapy         float32
-	players      map[string]*Player
-	lock         *sync.RWMutex
-	playerAccept chan net.Conn
-	done         chan bool
-	delta        map[string]*ActionData
+	Name       string
+	Width      float32
+	Height     float32
+	MaxPlayers int
+	GameTime   int // Not really used
+
+	lastId     int
+	password   string
+	deltaStore map[string]*DeltaFrame
+	players    map[int]*Client
+
+	joinLock sync.Mutex
+	sendLock sync.Mutex
+
+	stop      chan bool
+	syncStop  chan bool
+	deltaStop chan bool
 }
 
-// This will store all the games
-var games map[string]*Game
-
-func init() {
-	games = make(map[string]*Game)
+type GameError struct {
+	Code int
+	Text string
 }
 
-func GameNew(nl net.Listener, name string, count int) *Game {
-	game := &Game{MaxPlayers: count, Name: name}
-	game.players = make(map[string]*Player)
-	game.delta = make(map[string]*ActionData)
-	game.lock = &sync.RWMutex{}
-	game.done = make(chan bool)
-	game.playerAccept = make(chan net.Conn)
+func (e *GameError) Error() string {
+	return e.Text
+}
 
-	return game
+// NOTE: This is actually a gamemanager function
+func (gm *GameManager) NewGame(name string, max int, x, y float32, password string) error {
+	gm.gamesLock.Lock()
+	defer gm.gamesLock.Unlock()
+
+	if _, ok := gm.games[name]; ok {
+		return errors.New("game already exists")
+	}
+
+	g := Game{}
+	g.Name = name
+	g.MaxPlayers = max
+	g.deltaStore = make(map[string]*DeltaFrame)
+	g.players = make(map[int]*Client)
+
+	g.stop = make(chan bool)
+	g.syncStop = make(chan bool)
+	g.deltaStop = make(chan bool)
+
+	gm.games[g.Name] = &g
+	go g.Start()
+
+	return nil
+}
+
+func (g *Game) Private() bool {
+	return len(g.password) != 0
+}
+
+func (g *Game) Start() {
+	go g.SyncFrames()
+	go g.DeltaFrames()
+}
+
+func (g *Game) DeltaFrames() {
+	deltaTimer := time.Tick(100 * time.Millisecond)
+	for {
+		select {
+		case <-deltaTimer:
+			g.sendLock.Lock()
+			if len(g.deltaStore) > 0 {
+				fmt.Println(g.Name+":", "Delta!")
+
+				frames := make([][]byte, 0)
+
+				for e := range g.deltaStore {
+					data, err := json.Marshal(g.deltaStore[e])
+					if err != nil {
+						continue
+					}
+					frames = append(frames, data)
+				}
+
+				for p := range g.players {
+					for f := range frames {
+						g.players[p].conn.Write(frames[f])
+						g.players[p].conn.Write([]byte("\n"))
+					}
+				}
+
+				// Clear the delta
+				for i := range g.deltaStore {
+					g.deltaStore[i] = nil
+					delete(g.deltaStore, i)
+				}
+			}
+			g.sendLock.Unlock()
+		}
+	}
 }
 
 func (g *Game) SyncFrames() {
 	syncTimer := time.Tick(1 * time.Second)
-	deltaTimer := time.Tick(100 * time.Millisecond)
 
 	for {
 		select {
 		case <-syncTimer:
-			g.lock.Lock()
-			fmt.Println("Tick!")
+			g.sendLock.Lock()
+			fmt.Println(g.Name+":", "Sync!")
 			g.GameTime++
-			s := Frame{Type: FRAME_SYNC, GameTime: g.GameTime}
+			s := SyncFrame{Command: FRAME_SYNC, GameTime: g.GameTime}
 			for pid := range g.players {
 				p := g.players[pid]
 				for eid := range p.Entities {
 					// We dereference so it copies the struct
-					e := *p.Entities[eid]
-					e.Id = p.Name + "-" + e.Id
-					d := ActionData{Type: ACTION_MOVE, Entity: e}
+					d := *p.Entities[eid]
+					d.Id = d.Id
 					s.Data = append(s.Data, d)
+					fmt.Println(d)
 				}
 			}
 
@@ -75,142 +140,48 @@ func (g *Game) SyncFrames() {
 			}
 
 			// Clear the delta
-			for i := range g.delta {
-				g.delta[i] = nil
-				delete(g.delta, i)
+			for i := range g.deltaStore {
+				g.deltaStore[i] = nil
+				delete(g.deltaStore, i)
 			}
-			g.lock.Unlock()
-		case <-deltaTimer:
-			g.lock.Lock()
-			if len(g.delta) > 0 {
-				fmt.Println("Delta!")
-				s := Frame{Type: FRAME_DELTA, GameTime: g.GameTime}
-
-				for e := range g.delta {
-					s.Data = append(s.Data, *g.delta[e])
-				}
-
-				data, err := json.Marshal(s)
-				if err != nil {
-					continue
-				}
-
-				for p := range g.players {
-					g.players[p].conn.Write(data)
-					g.players[p].conn.Write([]byte("\n"))
-				}
-
-				// Clear the delta
-				for i := range g.delta {
-					g.delta[i] = nil
-					delete(g.delta, i)
-				}
-			}
-			g.lock.Unlock()
+			g.sendLock.Unlock()
 		}
 	}
 }
 
-func (g *Game) Start() {
-	go g.SyncFrames()
-	go g.AcceptPlayers()
-	/*if games == nil {
-		fmt.Println("Well, shit")
-	}*/
-	games[g.Name] = g
-}
-
-func (g *Game) AcceptPlayers() {
-	for {
-		select {
-		case p := <-g.playerAccept:
-			// TODO: Fix issue if overflow in g.LastId
-			temp := &Player{
-				Name:     strconv.Itoa(g.LastId),
-				conn:     p,
-				Entities: make(map[string]*Entity),
-			}
-			g.LastId++
-			g.players[temp.Name] = temp
-			go g.HandleClient(temp)
-		}
+func (p *Client) Join(name string) *GameError {
+	g, ok := gm.games[name]
+	if !ok {
+		return &GameError{Code: 1, Text: "game doesn't exist"}
 	}
-}
 
-func (p *Player) jsonChan() chan ActionData {
-	j := make(chan ActionData)
-	go func() {
-		dec := json.NewDecoder(p.conn)
-		for {
-			var m ActionData
-			if err := dec.Decode(&m); err == io.EOF {
-				// TODO: End of IO
-				j <- ActionData{Type: -1}
-				break
-			} else if err != nil {
-				j <- ActionData{Type: -1}
-				return
-			}
+	if len(g.players) >= g.MaxPlayers {
+		return &GameError{Code: 2, Text: "game full"}
+	}
 
-			j <- m
-		}
-	}()
-	return j
-}
+	g.joinLock.Lock()
+	defer g.joinLock.Unlock()
 
-func (g *Game) HandleClient(p *Player) {
-	defer p.conn.Close()
+	nextId := g.lastId
 
-	fmt.Printf("%s: cid: %s\n", g.Name, p.Name)
-
-	s := &Entity{Type: TYPE_SHIP, Id: strconv.Itoa(p.LastId)}
-	// TODO: Fix issue if overflow in p.LastId
-	p.Entities[s.Id] = s
-	p.LastId++
-
-	g.lock.Lock()
-	e := *p.Entities[s.Id]
-	e.Id = p.Name + "-" + e.Id
-	g.delta[e.Id] = &ActionData{Type: ACTION_CREATE, Entity: e}
-	g.lock.Unlock()
-
-	j := p.jsonChan()
-
-	// TODO: Rewrite this
+	// NOTE: This will shit itself if we have more players than int >= 0 can handle
 	for {
-		select {
-		case <-p.quit:
-			// TODO: Notify client
+		if _, ok := g.players[nextId]; !ok {
 			break
-		case f := <-j:
-			if f.Type == -1 {
-				// Err reading - remove this player
-				// Clear out entities - this is for GC stuff
-				g.lock.Lock()
-				for i := range p.Entities {
-					e := *p.Entities[i]
-					e.Id = p.Name + "-" + e.Id
-					g.delta[p.Entities[i].Id] = &ActionData{Type: ACTION_DESTROY, Entity: e}
-					p.Entities[i] = nil
-					delete(p.Entities, i)
-				}
-				g.lock.Unlock()
+		}
 
-				g.players[p.Name] = nil
-				delete(g.players, p.Name)
-
-				fmt.Println("Player disconnected")
-
-				return
-			}
-
-			g.lock.Lock()
-			g.delta[f.Entity.Id] = &f
-			g.lock.Unlock()
+		nextId++
+		if nextId < 0 {
+			nextId = 0
 		}
 	}
-}
 
-func (g *Game) Stop() {
-	// TODO: Shut down go routines
+	g.players[nextId] = p
+	p.Id = nextId
+	g.lastId = nextId + 1
+
+	p.Status = STATUS_GAME
+	p.game = g
+
+	return nil
 }

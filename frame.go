@@ -1,31 +1,84 @@
 package main
 
-type Frame struct {
-	Type     FrameType    `json:"t"`
-	GameTime int          `json:"gt"`
-	Data     []ActionData `json:"d"`
-}
-
-type ConnectFrame struct {
-	Game string `json:"g"`
-}
-
-type ActionData struct {
-	Type   ActionType `json:"t"`
-	Entity Entity     `json:"e"`
-}
-
-type ActionType int
-
-const (
-	ACTION_CREATE  ActionType = 1
-	ACTION_DESTROY            = 2
-	ACTION_MOVE               = 3
+import (
+	"encoding/json"
 )
 
-type FrameType int
+type OutputCommand int
 
 const (
-	FRAME_DELTA FrameType = 1
-	FRAME_SYNC            = 2
+	FRAME_ERROR OutputCommand = -1
+	FRAME_SYNC                = 1
+
+	// Delta commands must be == related InputCommands
+	FRAME_DELTA_UPDATE = 2
+	FRAME_DELTA_REMOVE = 3
+	FRAME_DELTA_CREATE = 4
+
+	// Responses to Lobby Commands
+	FRAME_LIST_RESPONSE   = 10
+	FRAME_CREATE_RESPONSE = 11
+	FRAME_JOIN_RESPONSE   = 12
 )
+
+type InputCommand int
+
+const (
+	COMMAND_ERROR InputCommand = -1
+
+	// Game Commands
+	COMMAND_LEAVE         = 1
+	COMMAND_ENTITY_UPDATE = 2
+	COMMAND_ENTITY_REMOVE = 3
+	COMMAND_ENTITY_CREATE = 4
+
+	// Lobby Commands
+	COMMAND_LIST   = 10
+	COMMAND_CREATE = 11
+	COMMAND_JOIN   = 12
+)
+
+type EntityType int
+
+const (
+	ENTITY_SHIP     EntityType = 1
+	ENTITY_ASTEROID            = 2
+	ENTITY_BULLET              = 3
+)
+
+type SyncFrame struct {
+	Command  OutputCommand `json:"c"`
+	GameTime int           `json:"t"`
+	Data     []Entity      `json:"e"`
+}
+
+type DeltaFrame struct {
+	Command  OutputCommand `json:"c"`
+	GameTime int           `json:"t"`
+	Data     Entity        `json:"e"`
+}
+
+type InputFrame struct {
+	Command InputCommand    `json:"c"`
+	Data    json.RawMessage `json:"d"`
+}
+
+type JoinInputFrame struct {
+	Name     string `json:"n"`
+	Password string `json:"p"`
+}
+
+type ListOutputFrame struct {
+	Command OutputCommand         `json:"c"`
+	Data    []ListOutputFrameData `json:"d"`
+}
+
+type ListOutputFrameData struct {
+	Name string `json:"n"`
+}
+
+type ErrorOutputFrame struct {
+	Command OutputCommand `json:"t"`
+	Code    int           `json:"id"`
+	Text    string        `json:"text"`
+}
