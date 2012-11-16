@@ -28,16 +28,15 @@ type Client struct {
 	quit chan bool
 }
 
+// This is magic
 func (c *Client) jsonChan() chan InputFrame {
-	// TODO: Actually exit on quit
-
 	j := make(chan InputFrame)
 	go func() {
 		for {
 			var m InputFrame
 			if err := c.decoder.Decode(&m); err == io.EOF {
 				// TODO: End of IO
-				j <- InputFrame{Command: COMMAND_ERROR}
+				j <- InputFrame{Command: COMMAND_EOF}
 				return
 			} else if err != nil {
 				j <- InputFrame{Command: COMMAND_ERROR}
@@ -55,7 +54,6 @@ func (c *Client) Leave() {
 	// Clear out entities - this is for GC stuff
 	if c.game != nil {
 		c.game.sendLock.Lock()
-		defer c.game.sendLock.Unlock()
 		for i := range c.Entities {
 			e := *c.Entities[i]
 			e.Id = c.Name + "-" + e.Id
@@ -68,6 +66,7 @@ func (c *Client) Leave() {
 		c.game.players[c.Id] = nil
 		delete(c.game.players, c.Id)
 
+		c.game.sendLock.Unlock()
 		c.game = nil
 		c.Status = STATUS_LOBBY
 
@@ -77,6 +76,7 @@ func (c *Client) Leave() {
 	return
 }
 
+// Send an error to the client, based on a GameError
 func (c *Client) Error(err *GameError) {
 	c.encoder.Encode(ErrorOutputFrame{Command: FRAME_ERROR, Text: err.Text, Code: err.Code})
 }
@@ -94,14 +94,18 @@ func (c *Client) Handle() {
 		case f := <-j:
 			if c.Status == STATUS_GAME {
 				switch f.Command {
-				case COMMAND_ERROR:
+				case COMMAND_EOF, COMMAND_ERROR:
+					// If in a game, on error, leave the game and close the connection
 					c.Leave()
+					c.conn.Close()
 				case COMMAND_ENTITY_CREATE, COMMAND_ENTITY_REMOVE, COMMAND_ENTITY_UPDATE:
+					// Anything that would generate a delta frame
 					temp := DeltaFrame{}
 					temp.Command = OutputCommand(f.Command)
 					json.Unmarshal(f.Data, &temp.Data)
 					c.game.sendLock.Lock()
 
+					// Update or remove?
 					switch f.Command {
 					case COMMAND_ENTITY_CREATE, COMMAND_ENTITY_UPDATE:
 						fmt.Println("Create/Update")
@@ -114,24 +118,34 @@ func (c *Client) Handle() {
 					c.game.deltaStore[temp.Data.Id] = &temp
 
 					c.game.sendLock.Unlock()
+				case COMMAND_LEAVE:
+					c.Leave()
 				}
 			} else {
 				switch f.Command {
+				case COMMAND_EOF:
+					c.conn.Close()
 				case COMMAND_JOIN:
 					temp := JoinInputFrame{}
 					json.Unmarshal(f.Data, &temp)
+
+					// Join the game
 					err := c.Join(temp.Name)
 					if err != nil {
 						c.Error(err)
 					} else {
-
+						// Join sets the id, so we can use it now
+						send := JoinOutputFrame{}
+						//send.Id = c.Id
+						send.Data = c.Id
+						c.encoder.Encode(send)
 					}
 				case COMMAND_LIST:
 					temp := ListOutputFrame{Command: COMMAND_LIST}
 					temp.Data = make([]ListOutputFrameData, 0)
 					for k := range gm.games {
 						game := gm.games[k]
-						// TODO: Send other data, not just Name2
+						// TODO: Send other data, not just Name
 						temp.Data = append(temp.Data, ListOutputFrameData{Name: game.Name})
 					}
 					c.encoder.Encode(temp)

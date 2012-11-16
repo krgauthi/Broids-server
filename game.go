@@ -9,28 +9,29 @@ import (
 )
 
 type Game struct {
-	Name       string
-	Width      float32
-	Height     float32
-	MaxPlayers int
-	GameTime   int // Not really used
+	Name       string  // Name of the game
+	Width      float32 // Width of the map
+	Height     float32 // Height of the map
+	MaxPlayers int     // Max number of players for this game
+	GameTime   int     // Not really used
 
-	lastId     int
-	password   string
-	deltaStore map[string]*DeltaFrame
-	players    map[int]*Client
+	lastId     int                    // Last connected id
+	password   string                 // Password for the game, MD5 hashed
+	deltaStore map[string]*DeltaFrame // Map of all DeltaFrames to be sent out, keyed by Id
+	players    map[int]*Client        // Map of all players, keyed by Id. We don't use an array because this could be really sparse.
 
-	joinLock sync.Mutex
-	sendLock sync.Mutex
+	joinLock sync.Mutex // Lock when player joins
+	sendLock sync.Mutex // Lock when frames are sent
 
-	stop      chan bool
-	syncStop  chan bool
-	deltaStop chan bool
+	stop      chan bool // Channel that will recieve data when quitting
+	syncStop  chan bool // Channel for stopping sync frames. Probably not needed any more.
+	deltaStop chan bool // Channel for stopping delta frames
 }
 
+// This defines an error that we can send using json
 type GameError struct {
-	Code int
-	Text string
+	Code int    `json:"c"` // Error code
+	Text string `json:"t"` // Error description
 }
 
 func (e *GameError) Error() string {
@@ -62,15 +63,18 @@ func (gm *GameManager) NewGame(name string, max int, x, y float32, password stri
 	return nil
 }
 
+// It's a private game if the password is empty
 func (g *Game) Private() bool {
 	return len(g.password) != 0
 }
 
+// Starting a game, we need to start sending sync frames and delta frames
 func (g *Game) Start() {
 	go g.SyncFrames()
 	go g.DeltaFrames()
 }
 
+// This command handles sending delta frames
 func (g *Game) DeltaFrames() {
 	deltaTimer := time.Tick(100 * time.Millisecond)
 	for {
@@ -104,6 +108,8 @@ func (g *Game) DeltaFrames() {
 				}
 			}
 			g.sendLock.Unlock()
+		case <-g.deltaStop:
+			break
 		}
 	}
 }
@@ -115,9 +121,12 @@ func (g *Game) SyncFrames() {
 		select {
 		case <-syncTimer:
 			g.sendLock.Lock()
+
 			fmt.Println(g.Name+":", "Sync!")
 			g.GameTime++
 			s := SyncFrame{Command: FRAME_SYNC, GameTime: g.GameTime}
+
+			// Create a list of all the entities
 			for pid := range g.players {
 				p := g.players[pid]
 				for eid := range p.Entities {
@@ -129,11 +138,14 @@ func (g *Game) SyncFrames() {
 				}
 			}
 
+			// Prepare the data for sending
 			data, err := json.Marshal(s)
 			if err != nil {
+				// Keep calm and error on
 				continue
 			}
 
+			// Send the sync frame to each player
 			for p := range g.players {
 				g.players[p].conn.Write(data)
 				g.players[p].conn.Write([]byte("\n"))
@@ -145,25 +157,30 @@ func (g *Game) SyncFrames() {
 				delete(g.deltaStore, i)
 			}
 			g.sendLock.Unlock()
+		case <-g.syncStop:
+			break
 		}
 	}
 }
 
 func (p *Client) Join(name string) *GameError {
+	// If the game doesn't exist, send an error
 	g, ok := gm.games[name]
 	if !ok {
 		return &GameError{Code: 1, Text: "game doesn't exist"}
 	}
 
+	// If the game is full, send an error
 	if len(g.players) >= g.MaxPlayers {
 		return &GameError{Code: 2, Text: "game full"}
 	}
 
 	g.joinLock.Lock()
-	defer g.joinLock.Unlock()
 
+	// Start on the lastId inserted
 	nextId := g.lastId
 
+	// This increments nextId until we find one that isn't used
 	// NOTE: This will shit itself if we have more players than int >= 0 can handle
 	for {
 		if _, ok := g.players[nextId]; !ok {
@@ -180,8 +197,11 @@ func (p *Client) Join(name string) *GameError {
 	p.Id = nextId
 	g.lastId = nextId + 1
 
+	// The player is now in a game
 	p.Status = STATUS_GAME
 	p.game = g
+
+	g.joinLock.Unlock()
 
 	return nil
 }

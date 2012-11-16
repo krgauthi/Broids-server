@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 )
 
+// Everything in this file is essentially the spec of what we will be getting and sending
+
 type OutputCommand int
 
 const (
@@ -24,7 +26,8 @@ const (
 type InputCommand int
 
 const (
-	COMMAND_ERROR InputCommand = -1
+	COMMAND_EOF   InputCommand = -2
+	COMMAND_ERROR              = -1
 
 	// Game Commands
 	COMMAND_LEAVE         = 1
@@ -74,11 +77,19 @@ type ListOutputFrame struct {
 }
 
 type ListOutputFrameData struct {
-	Name string `json:"n"`
+	Name    string `json:"n"`
+	Private int    `json:"p"`
+	Max     int    `json:"m"`
+	Current int    `json:"c"`
 }
 
 type ErrorOutputFrame struct {
 	Command OutputCommand `json:"t"`
 	Code    int           `json:"id"`
 	Text    string        `json:"text"`
+}
+
+type JoinOutputFrame struct {
+	Command OutputCommand `json:"c"`
+	Data    int           `json:"d"`
 }
