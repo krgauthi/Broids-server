@@ -80,13 +80,10 @@ class Broids {
 				} else {
 					System.out.println("Delta");
 				}
-				
-				/*e = obj.get("t");
-				int time = e.getAsInt();
-				System.out.println("Gametime-gt  = " + time);
-				
+				if(frameType == FRAME_DELTA_UPDATE || frameType == FRAME_DELTA_CREATE){
+
 				JsonObject eArray;
-				e = obj.get("d");
+				e = obj.get("e");
 
 				JsonObject inner = e.getAsJsonObject();
 				
@@ -111,7 +108,18 @@ class Broids {
 				System.out.println("d.e.d dPos-d = " +dPos);
 
 				float vPos = entity.get("v").getAsFloat();
-				System.out.println("d.e.v vPos-v = " +vPos);*/
+				System.out.println("d.e.v vPos-v = " +vPos)
+
+				}
+				if(frameType == FRAME_DELTA_REMOVE){
+				JsonObject eArray;
+				e = obj.get("e");
+
+				JsonObject inner = e.getAsJsonObject();
+			
+				String id = entity.get("id").getAsString();
+				System.out.println("d.e.id Id-id = " +id);
+				}
 
 			}
 		} catch (UnknownHostException e) {
