@@ -20,15 +20,22 @@ type GameManager struct {
 var gm *GameManager = nil
 
 // Initialize the game manager
-func StartGameManager(nl net.Listener) *GameManager {
+func StartGameManager(bind string) *GameManager {
 	gm = &GameManager{}
-	gm.listener = nl
 	gm.games = make(map[string]*Game)
+
+	var err error
+	// Start the listener
+	gm.listener, err = net.Listen("tcp", bind)
+	//defer gm.listener.Close()
+	if err != nil {
+		return nil
+	}
 
 	return gm
 }
 
-// Listen for new clients and send them off, concurrently to be handled
+// Listen for new clients and send them off, concurrently, to be handled
 func (gm *GameManager) Listen() {
 	for {
 		conn, err := gm.listener.Accept()

@@ -70,7 +70,6 @@ func (g *Game) Private() bool {
 
 // Starting a game, we need to start sending sync frames and delta frames
 func (g *Game) Start() {
-	go g.SyncFrames()
 	go g.DeltaFrames()
 }
 
@@ -114,55 +113,6 @@ func (g *Game) DeltaFrames() {
 	}
 }
 
-func (g *Game) SyncFrames() {
-	syncTimer := time.Tick(1 * time.Second)
-
-	for {
-		select {
-		case <-syncTimer:
-			g.sendLock.Lock()
-
-			fmt.Println(g.Name+":", "Sync!")
-			g.GameTime++
-			s := SyncFrame{Command: FRAME_SYNC, GameTime: g.GameTime}
-
-			// Create a list of all the entities
-			for pid := range g.players {
-				p := g.players[pid]
-				for eid := range p.Entities {
-					// We dereference so it copies the struct
-					d := *p.Entities[eid]
-					d.Id = d.Id
-					s.Data = append(s.Data, d)
-					fmt.Println(d)
-				}
-			}
-
-			// Prepare the data for sending
-			data, err := json.Marshal(s)
-			if err != nil {
-				// Keep calm and error on
-				continue
-			}
-
-			// Send the sync frame to each player
-			for p := range g.players {
-				g.players[p].conn.Write(data)
-				g.players[p].conn.Write([]byte("\n"))
-			}
-
-			// Clear the delta
-			for i := range g.deltaStore {
-				g.deltaStore[i] = nil
-				delete(g.deltaStore, i)
-			}
-			g.sendLock.Unlock()
-		case <-g.syncStop:
-			break
-		}
-	}
-}
-
 func (p *Client) Join(name string) *GameError {
 	// If the game doesn't exist, send an error
 	g, ok := gm.games[name]
@@ -182,6 +132,7 @@ func (p *Client) Join(name string) *GameError {
 
 	// This increments nextId until we find one that isn't used
 	// NOTE: This will shit itself if we have more players than int >= 0 can handle
+	// It'll busy loop until someone disconnects.
 	for {
 		if _, ok := g.players[nextId]; !ok {
 			break

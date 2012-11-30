@@ -3,7 +3,8 @@
 	[
 		{
 			"path": ".",
-			"file_exclude_patterns": ["*.sublime-*", "broids"]
+			"file_exclude_patterns": ["*.sublime-*", "broids", "bs", "*.class"],
+			"folder_exclude_patterns": ["example/build", "example/dist"]
 		}
 	]
 }

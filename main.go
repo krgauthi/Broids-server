@@ -2,24 +2,15 @@ package main
 
 import (
 	"fmt"
-	"net"
 )
 
 func main() {
 	fmt.Println("Starting broids server")
 
-	// Start the server, listening on all interfaces, on port 9988
-	nl, err := net.Listen("tcp", "0.0.0.0:9988")
-	defer nl.Close()
-	if err != nil {
-		fmt.Println("main", err)
-		return
-	}
-
-	// Start the game manager
-	m := StartGameManager(nl)
+	// Start the game manager, listening on all interfaces on port 9988
+	m := StartGameManager("0.0.0.0:9988")
 	if m == nil {
-		fmt.Println("GameManager:", "failed to start")
+		fmt.Println("main:", "failed to start GameManager")
 		return
 	}
 

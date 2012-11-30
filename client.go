@@ -81,6 +81,44 @@ func (c *Client) Error(err *GameError) {
 	c.encoder.Encode(ErrorOutputFrame{Command: FRAME_ERROR, Text: err.Text, Code: err.Code})
 }
 
+func (c *Client) Sync() {
+	c.game.sendLock.Lock()
+
+	fmt.Println(c.game.Name+":", "Sync!")
+	c.game.GameTime++
+	s := SyncFrame{Command: FRAME_SYNC, GameTime: c.game.GameTime}
+
+	// Create a list of all the entities
+	for pid := range c.game.players {
+		p := c.game.players[pid]
+		for eid := range p.Entities {
+			// We dereference so it copies the struct
+			d := *p.Entities[eid]
+			d.Id = d.Id
+			s.Data = append(s.Data, d)
+			fmt.Println(d)
+		}
+	}
+
+	// Prepare the data for sending
+	data, err := json.Marshal(s)
+	if err != nil {
+		// Keep calm and error on
+		return
+	}
+
+	// Send the sync frame to this user
+	c.conn.Write(data)
+	c.game.players[p].conn.Write([]byte("\n"))
+
+	// Clear the delta
+	for i := range c.game.deltaStore {
+		c.game.deltaStore[i] = nil
+		delete(c.game.deltaStore, i)
+	}
+	c.game.sendLock.Unlock()
+}
+
 func (c *Client) Handle() {
 	// TODO: Rewrite this
 
@@ -118,6 +156,8 @@ func (c *Client) Handle() {
 					c.game.deltaStore[temp.Data.Id] = &temp
 
 					c.game.sendLock.Unlock()
+				case COMMAND_REQUEST_SYNC:
+					c.Sync()
 				case COMMAND_LEAVE:
 					c.Leave()
 				}
@@ -139,6 +179,7 @@ func (c *Client) Handle() {
 						//send.Id = c.Id
 						send.Data = c.Id
 						c.encoder.Encode(send)
+						c.Sync()
 					}
 				case COMMAND_LIST:
 					temp := ListOutputFrame{Command: COMMAND_LIST}
