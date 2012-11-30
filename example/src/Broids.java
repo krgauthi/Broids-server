@@ -91,6 +91,28 @@ class Broids {
 			g.toJson(o, out);
 			out.flush();
 
+			JsonObject frameCreate = new JsonObject(); //Main object
+			frameCreate.addProperty("c", FRAME_DELTA_CREATE);
+			frameCreate.addProperty("gt", 0);
+			JsonObject eObject = new JsonObject(); //object containing entity details
+			eObject.addProperty("id", "blank");
+			eObject.addProperty("x", 0);
+			eObject.addProperty("t", ENTITY_SHIP);
+			eObject.addProperty("y", 0);
+			eObject.addProperty("a", 0);
+			eObject.addProperty("av", 0);
+			eObject.addProperty("xv", 0);
+			eObject.addProperty("yv", 0);
+			frameCreate.add(e, eObject); //adding detail object to the main object 
+		
+			JsonWriter out = new JsonWriter(new BufferedWriter(new OutputStreamWriter(s.getOutputStream())));
+			g.toJson(frameCreate, out);
+			out.flush(); //shipping it out Kaleb style
+
+
+			// when you joing the game ---> every time create a FRAME_DELTA_CREATE = 4 which is a delta frame.
+			   //make a json object, add the enity features or maybe just create the propertys inside the object
+			   //Am I copying the properties or just creating the object with properties
 			System.out.println("And now we listen");
 
 			JsonStreamParser parser = new JsonStreamParser(new BufferedReader(new InputStreamReader(s.getInputStream())));
