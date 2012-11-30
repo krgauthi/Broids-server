@@ -27,6 +27,7 @@ class Broids {
 	public static final int COMMAND_ENTITY_UPDATE = 2;
 	public static final int COMMAND_ENTITY_REMOVE = 3;
 	public static final int COMMAND_ENTITY_CREATE = 4;
+	public static final int COMMAND_REQUEST_SYNC = 5;
 
 	// Lobby Commands
 	public static final int COMMAND_LIST = 10;
@@ -41,6 +42,38 @@ class Broids {
 	// State
 	public static final int STATUS_LOBBY = 1;
 	public static final int STATUS_GAME = 2;
+
+	/*public static Entity findEntity(String id) {
+		String[] idParts = id.split("-");
+		if (CoreLogic.players.containsKey(idParts[0])) {
+			Player temp = CoreLogic.players.[idParts[0]];
+			if (temp.entities.containsKey(idParts[1])) {
+				return temp.entities[idParts[1]];
+			}
+		}
+
+		return null;
+	}
+
+	public static void removeEntity(String id) {
+		String[] idParts = id.split("-");
+		if (CoreLogic.players.containsKey(idParts[0])) {
+			Player temp = CoreLogic.players.[idParts[0]];
+			if (temp.entities.containsKey(idParts[1])) {
+				temp.entities.remove(idParts[1]);
+			}
+		}
+	}
+
+	public static void removeEntity(Entity e) {
+		String[] idParts = e.getId().split("-");
+		if (CoreLogic.players.containsKey(idParts[0])) {
+			Player temp = CoreLogic.players.[idParts[0]];
+			if (temp.entities.containsKey(idParts[1])) {
+				temp.entities.remove(idParts[1]);
+			}
+		}
+	}*/
 
 	public static void main(String[] arg) {
 		try {
@@ -80,45 +113,45 @@ class Broids {
 				} else {
 					System.out.println("Delta");
 				}
-				if(frameType == FRAME_DELTA_UPDATE || frameType == FRAME_DELTA_CREATE){
 
-				JsonObject eArray;
-				e = obj.get("e");
-
-				JsonObject inner = e.getAsJsonObject();
-				
-				int actionType = inner.get("t").getAsInt();
-				System.out.println("ActionType-t = " + actionType);
-				
-				JsonObject entity = inner.get("e").getAsJsonObject();
-
-				String id = entity.get("id").getAsString();
-				System.out.println("d.e.id Id-id = " +id);
-
-				int entityType = entity.get("t").getAsInt();
-				System.out.println("d.e.t Type-t = " + entityType);
-
-				float xPos = entity.get("x").getAsFloat();
-				System.out.println("d.e.x xPos-x = " +xPos);
-
-				float yPos = entity.get("y").getAsFloat();
-				System.out.println("d.e.y yPos-y = " +yPos);
-
-				float dPos = entity.get("d").getAsFloat();
-				System.out.println("d.e.d dPos-d = " +dPos);
-
-				float vPos = entity.get("v").getAsFloat();
-				System.out.println("d.e.v vPos-v = " +vPos)
-
-				}
-				if(frameType == FRAME_DELTA_REMOVE){
 				JsonObject eArray;
 				e = obj.get("e");
 
 				JsonObject inner = e.getAsJsonObject();
 			
-				String id = entity.get("id").getAsString();
+				String id = inner.get("id").getAsString();
 				System.out.println("d.e.id Id-id = " +id);
+
+				if (frameType == FRAME_DELTA_UPDATE || frameType == FRAME_DELTA_CREATE) {
+					int actionType = inner.get("t").getAsInt();
+					System.out.println("ActionType-t = " + actionType);
+
+					int entityType = inner.get("t").getAsInt();
+					System.out.println("d.e.t Type-t = " + entityType);
+
+					float xPos = inner.get("x").getAsFloat();
+					System.out.println("d.e.x xPos-x = " + xPos);
+
+					float yPos = inner.get("y").getAsFloat();
+					System.out.println("d.e.y yPos-y = " + yPos);
+
+					float xVel = inner.get("xv").getAsFloat();
+					System.out.println("d.e.x xVel-x = " + xVel);
+
+					float yVel = inner.get("yv").getAsFloat();
+					System.out.println("d.e.y yVel-y = " + yVel);
+
+					float dPos = inner.get("d").getAsFloat();
+					System.out.println("d.e.d dPos-d = " + dPos);
+
+					float vPos = inner.get("v").getAsFloat();
+					System.out.println("d.e.v vPos-v = " + vPos);
+
+					// Update here
+					//Entity temp = CoreLogic.findEntity(id);
+					//temp.teleport(null, null, xPos, yPos, dPos, vPos, xVel, yVel);
+				} else {
+					//CoreLogic.removeEntity(id);
 				}
 
 			}
@@ -126,10 +159,10 @@ class Broids {
 
 		} catch (IOException e) {
 
-		} catch (Exception e) {
+		}/* catch (Exception e) {
 			System.out.println(e);
 			e.printStackTrace();
-			// Cave Johnson, we're done here.
-		}
+		}*/
+		// Cave Johnson, we're done here.
 	}
 }
