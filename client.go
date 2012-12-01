@@ -109,7 +109,7 @@ func (c *Client) Sync() {
 
 	// Send the sync frame to this user
 	c.conn.Write(data)
-	c.game.players[p].conn.Write([]byte("\n"))
+	c.conn.Write([]byte("\n"))
 
 	// Clear the delta
 	for i := range c.game.deltaStore {
