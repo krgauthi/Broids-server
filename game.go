@@ -155,6 +155,13 @@ func (p *Client) Join(name string) *GameError {
 	p.Status = STATUS_GAME
 	p.game = g
 
+	// Join sets the id, so we can use it now
+	send := JoinOutputFrame{}
+	data := JoinOutputFrameData{Width: g.Width, Height: g.Height, Id: nextId}
+	send.Data = data
+	p.encoder.Encode(send)
+	p.Sync()
+
 	g.joinLock.Unlock()
 
 	return nil

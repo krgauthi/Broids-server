@@ -91,6 +91,12 @@ type ErrorOutputFrame struct {
 }
 
 type JoinOutputFrame struct {
-	Command OutputCommand `json:"c"`
-	Data    int           `json:"d"`
+	Command OutputCommand       `json:"c"`
+	Data    JoinOutputFrameData `json:"d"`
+}
+
+type JoinOutputFrameData struct {
+	Id     int     `json:"id"`
+	Width  float32 `json:"w"`
+	Height float32 `json:"h"`
 }

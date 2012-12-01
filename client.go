@@ -173,21 +173,23 @@ func (c *Client) Handle() {
 					err := c.Join(temp.Name)
 					if err != nil {
 						c.Error(err)
-					} else {
-						// Join sets the id, so we can use it now
-						send := JoinOutputFrame{}
-						//send.Id = c.Id
-						send.Data = c.Id
-						c.encoder.Encode(send)
-						c.Sync()
 					}
 				case COMMAND_LIST:
 					temp := ListOutputFrame{Command: COMMAND_LIST}
 					temp.Data = make([]ListOutputFrameData, 0)
 					for k := range gm.games {
 						game := gm.games[k]
-						// TODO: Send other data, not just Name
-						temp.Data = append(temp.Data, ListOutputFrameData{Name: game.Name})
+						var priv int
+						if game.Private() {
+							priv = 1
+						}
+
+						temp.Data = append(temp.Data, ListOutputFrameData{
+							Name:    game.Name,
+							Current: len(game.players),
+							Max:     game.MaxPlayers,
+							Private: priv},
+						)
 					}
 					c.encoder.Encode(temp)
 				}
