@@ -57,6 +57,9 @@ func (gm *GameManager) NewGame(name string, max int, x, y float32, password stri
 	g.syncStop = make(chan bool)
 	g.deltaStop = make(chan bool)
 
+	// We have to start with 2 because of some client black magic
+	g.lastId = 2
+
 	gm.games[g.Name] = &g
 	go g.Start()
 
@@ -134,13 +137,13 @@ func (p *Client) Join(name string) *GameError {
 	// NOTE: This will shit itself if we have more players than int >= 0 can handle
 	// It'll busy loop until someone disconnects.
 	for {
-		if _, ok := g.players[nextId]; !ok {
+		if _, ok := g.players[nextId]; !ok && nextId > 1 {
 			break
 		}
 
 		nextId++
-		if nextId < 0 {
-			nextId = 0
+		if nextId < 2 {
+			nextId = 2
 		}
 	}
 

@@ -132,6 +132,7 @@ class Broids {
 				int frameType = e.getAsInt();
 				if (frameType == FRAME_SYNC) {
 					System.out.println("Sync");
+					continue;
 				} else {
 					System.out.println("Delta");
 				}
