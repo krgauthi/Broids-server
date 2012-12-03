@@ -50,6 +50,9 @@ func (gm *GameManager) NewGame(name string, max int, x, y float32, password stri
 	g := Game{}
 	g.Name = name
 	g.MaxPlayers = max
+	g.Height = x
+	g.Width = y
+
 	g.deltaStore = make(map[string]*DeltaFrame)
 	g.players = make(map[int]*Client)
 
@@ -116,11 +119,15 @@ func (g *Game) DeltaFrames() {
 	}
 }
 
-func (p *Client) Join(name string) *GameError {
+func (p *Client) Join(name string, pass string) *GameError {
 	// If the game doesn't exist, send an error
 	g, ok := gm.games[name]
 	if !ok {
 		return &GameError{Code: 1, Text: "game doesn't exist"}
+	}
+
+	if g.Private() && g.password == pass {
+		return &GameError{Code: 3, Text: "invalid password"}
 	}
 
 	// If the game is full, send an error
@@ -155,8 +162,10 @@ func (p *Client) Join(name string) *GameError {
 	p.Status = STATUS_GAME
 	p.game = g
 
+	// TODO: Join delta frame
+
 	// Join sets the id, so we can use it now
-	send := JoinOutputFrame{}
+	send := JoinOutputFrame{Command: FRAME_JOIN_RESPONSE}
 	data := JoinOutputFrameData{Width: g.Width, Height: g.Height, Id: nextId}
 	send.Data = data
 	p.encoder.Encode(send)

@@ -13,14 +13,18 @@ const (
 	FRAME_SYNC                = 1
 
 	// Delta commands must be == related InputCommands
-	FRAME_DELTA_UPDATE = 2
-	FRAME_DELTA_REMOVE = 3
-	FRAME_DELTA_CREATE = 4
+	FRAME_ENTITY_UPDATE = 2
+	FRAME_ENTITY_REMOVE = 3
+	FRAME_ENTITY_CREATE = 4
+	FRAME_PLAYER_REMOVE = 5
+	FRAME_PLAYER_CREATE = 6
+	FRAME_HOST_CHANGE   = 7
 
 	// Responses to Lobby Commands
 	FRAME_LIST_RESPONSE   = 10
 	FRAME_CREATE_RESPONSE = 11
 	FRAME_JOIN_RESPONSE   = 12
+	FRAME_LEAVE_RESPONSE  = 13
 )
 
 type InputCommand int
@@ -34,7 +38,9 @@ const (
 	COMMAND_ENTITY_UPDATE = 2
 	COMMAND_ENTITY_REMOVE = 3
 	COMMAND_ENTITY_CREATE = 4
-	COMMAND_REQUEST_SYNC  = 5
+	COMMAND_PLAYER_REMOVE = 5
+	COMMAND_PLAYER_CREATE = 6
+	COMMAND_SYNC_REQUEST  = 7
 
 	// Lobby Commands
 	COMMAND_LIST   = 10
@@ -77,6 +83,10 @@ type ListOutputFrame struct {
 	Data    []ListOutputFrameData `json:"d"`
 }
 
+type LeaveOutputFrame struct {
+	Command OutputCommand `json:"c"`
+}
+
 type ListOutputFrameData struct {
 	Name    string `json:"n"`
 	Private int    `json:"p"`
@@ -85,9 +95,19 @@ type ListOutputFrameData struct {
 }
 
 type ErrorOutputFrame struct {
-	Command OutputCommand `json:"t"`
+	Command OutputCommand `json:"c"`
 	Code    int           `json:"id"`
 	Text    string        `json:"text"`
+}
+
+type CreateOutputFrame struct {
+	Command OutputCommand `json:"c"`
+	Data    string        `json:"d"`
+}
+
+type HostOutputFrame struct {
+	Command OutputCommand `json:"c"`
+	Data    string        `json:"d"`
 }
 
 type JoinOutputFrame struct {

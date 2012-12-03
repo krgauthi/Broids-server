@@ -73,7 +73,9 @@ func (c *Client) Leave() {
 		fmt.Println("Player left game")
 	}
 
-	return
+	// TODO: Leave delta frame
+	out := LeaveOutputFrame{Command: FRAME_LEAVE_RESPONSE}
+	c.encoder.Encode(out)
 }
 
 // Send an error to the client, based on a GameError
@@ -156,7 +158,9 @@ func (c *Client) Handle() {
 					c.game.deltaStore[temp.Data.Id] = &temp
 
 					c.game.sendLock.Unlock()
-				case COMMAND_REQUEST_SYNC:
+				case COMMAND_PLAYER_CREATE, COMMAND_PLAYER_REMOVE:
+
+				case COMMAND_SYNC_REQUEST:
 					c.Sync()
 				case COMMAND_LEAVE:
 					c.Leave()
@@ -170,7 +174,7 @@ func (c *Client) Handle() {
 					json.Unmarshal(f.Data, &temp)
 
 					// Join the game
-					err := c.Join(temp.Name)
+					err := c.Join(temp.Name, temp.Password)
 					if err != nil {
 						c.Error(err)
 					}
