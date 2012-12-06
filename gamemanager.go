@@ -49,12 +49,19 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 
 	out := Frame{Command: FRAME_LOBBY_JOIN}
 	temp := JoinOutputData{Id: g.NextId(c), Host: false}
+
+	// TODO: Handle host on disconnect
+	if len(g.players) == 1 {
+		temp.Host = true
+	}
+
 	out.Data = temp
-	c.encoder.Encode(temp)
+
+	c.encoder.Encode(out)
 
 	g.players[strconv.Itoa(temp.Id)] = c
 	c.game = g
-	c.entities = make(map[string]*Entity) // TODO: Be sure to manage this
+	c.entities = make(map[string]*Entity)
 }
 
 func (gm *GameManager) NewGame(c *Client, name string, limit int, x, y float32, pass string) {
@@ -80,7 +87,8 @@ func (gm *GameManager) NewGame(c *Client, name string, limit int, x, y float32, 
 	gm.games[g.name] = g
 
 	if c != nil {
-		gm.JoinGame(c, g.name, g.password)
+		// TODO: Find a better solution other than running async
+		go gm.JoinGame(c, g.name, g.password)
 	}
 }
 
@@ -106,6 +114,8 @@ func (gm *GameManager) ListGames(c *Client) {
 		list = append(list, out)
 	}
 	temp.Data = list
+
+	fmt.Println(list)
 
 	c.encoder.Encode(temp)
 	gm.gamesLock.Unlock()

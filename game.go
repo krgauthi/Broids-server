@@ -43,13 +43,9 @@ type Entity struct {
 	Av   float32    `json:"av"`
 }
 
-func (g *Game) SyncFrame(c *Client) {
-	// TODO: This should be in client somewhere
-	if c.game == nil {
-		c.SendError("no game assigned to player")
-		return
-	}
+// TODO: Send HOST change when needed
 
+func (g *Game) SyncFrame(c *Client) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -212,14 +208,32 @@ func (g *Game) RemovePlayer(id string) {
 }
 
 func (g *Game) RoundOver() {
-	// TODO: Implement
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_ROUND_OVER}
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
 }
 
 func (g *Game) Leave(c *Client) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	// TODO: Remove player
+	if _, ok := g.players[strconv.Itoa(c.Id)]; ok {
+		delete(g.players, strconv.Itoa(c.Id))
+	}
 
 	var frames sync.WaitGroup
 	for ek := range c.entities {
@@ -229,17 +243,40 @@ func (g *Game) Leave(c *Client) {
 			for pk := range g.players {
 				players.Add(1)
 				go func() {
-
+					out := &Frame{Command: FRAME_GAME_LEAVE}
+					out.Data = c.entities[ek].Id
+					g.players[pk].encoder.Encode(out)
 					frames.Done()
 				}()
 			}
+			players.Wait()
 			frames.Done()
 		}()
 	}
+
+	frames.Wait()
 }
 
 func (g *Game) Collision(a, b string) {
-	// TODO: Implement
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_COLLISION}
+	d := CollisionOutputData{EntityA: a, EntityB: b}
+	out.Data = d
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
 }
 
 func (g *Game) DeltaFrame(c FrameType, data *DeltaOutputData) {

@@ -65,11 +65,18 @@ type SyncOutputData struct {
 	Entities []*Entity `json:"e"`
 }
 
+type CollisionOutputData struct {
+	EntityA string `json:"a"`
+	EntityB string `json:"b"`
+}
+
 type DeltaOutputData interface{}
 
 type JoinOutputData struct {
-	Id   int  `json:"i"`
-	Host bool `json:"h"`
+	Id   int     `json:"i"`
+	Host bool    `json:"h"`
+	X    float32 `json:"x"`
+	Y    float32 `json:"y"`
 }
 
 // Client -> Server (Input)

@@ -26,7 +26,11 @@ func (c *Client) SendError(err string) {
 }
 
 func (c *Client) Disconnect() {
-	// TODO: Implement
+	if c.game != nil {
+		c.game.Leave(c)
+	}
+
+	c.conn.Close()
 }
 
 func (c *Client) Handle(gm *GameManager) {
@@ -58,7 +62,6 @@ func (c *Client) Handle(gm *GameManager) {
 				err = c.decoder.Decode(&command)
 				if err != nil {
 					c.game.RemovePlayer(string(c.Id))
-					// TODO: Make sure all entities are taken care of
 					c.Disconnect()
 					reallyExit = true
 					break
