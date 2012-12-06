@@ -4,119 +4,102 @@ import (
 	"encoding/json"
 )
 
-// Everything in this file is essentially the spec of what we will be getting and sending
-
-type OutputCommand int
+type FrameType int
 
 const (
-	FRAME_ERROR OutputCommand = -1
-	FRAME_SYNC                = 1
+	// Server -> Client communication
+	FRAME_ERROR              FrameType = -1
+	FRAME_GAME_LEAVE                   = 0
+	FRAME_GAME_ENTITY_CREATE           = 1
+	FRAME_GAME_ENTITY_MODIFY           = 2
+	FRAME_GAME_ENTITY_REMOVE           = 3
+	FRAME_GAME_COLLISION               = 4
+	FRAME_GAME_PLAYER_CREATE           = 5
+	FRAME_GAME_PLAYER_MODIFY           = 6
+	FRAME_GAME_PLAYER_REMOVE           = 7
+	FRAME_GAME_ROUND_OVER              = 8
+	FRAME_GAME_SYNC                    = 9
 
-	// Delta commands must be == related InputCommands
-	FRAME_ENTITY_UPDATE = 2
-	FRAME_ENTITY_REMOVE = 3
-	FRAME_ENTITY_CREATE = 4
-	FRAME_PLAYER_REMOVE = 5
-	FRAME_PLAYER_CREATE = 6
-	FRAME_HOST_CHANGE   = 7
+	// The only game frame without a command equivalent
+	FRAME_GAME_HOST_CHANGE = 10
 
-	// Responses to Lobby Commands
-	FRAME_LIST_RESPONSE   = 10
-	FRAME_CREATE_RESPONSE = 11
-	FRAME_JOIN_RESPONSE   = 12
-	FRAME_LEAVE_RESPONSE  = 13
+	FRAME_LOBBY_LIST   = 20
+	FRAME_LOBBY_CREATE = 21
+	FRAME_LOBBY_JOIN   = 22
 )
 
-type InputCommand int
+type CommandType int
 
 const (
-	COMMAND_EOF   InputCommand = -2
-	COMMAND_ERROR              = -1
+	// Client -> Server communication
+	COMMAND_GAME_LEAVE         CommandType = 0
+	COMMAND_GAME_ENTITY_CREATE             = 1
+	COMMAND_GAME_ENTITY_MODIFY             = 2
+	COMMAND_GAME_ENTITY_REMOVE             = 3
+	COMMAND_GAME_COLLISION                 = 4
+	COMMAND_GAME_PLAYER_CREATE             = 5
+	COMMAND_GAME_PLAYER_MODIFY             = 6
+	COMMAND_GAME_PLAYER_REMOVE             = 7
+	COMMAND_GAME_ROUND_OVER                = 8
 
-	// Game Commands
-	COMMAND_LEAVE         = 1
-	COMMAND_ENTITY_UPDATE = 2
-	COMMAND_ENTITY_REMOVE = 3
-	COMMAND_ENTITY_CREATE = 4
-	COMMAND_PLAYER_REMOVE = 5
-	COMMAND_PLAYER_CREATE = 6
-	COMMAND_SYNC_REQUEST  = 7
-
-	// Lobby Commands
-	COMMAND_LIST   = 10
-	COMMAND_CREATE = 11
-	COMMAND_JOIN   = 12
+	COMMAND_LOBBY_LIST   = 20
+	COMMAND_LOBBY_CREATE = 21
+	COMMAND_LOBBY_JOIN   = 22
 )
 
-type EntityType int
-
-const (
-	ENTITY_SHIP     EntityType = 1
-	ENTITY_ASTEROID            = 2
-	ENTITY_BULLET              = 3
-)
-
-type SyncFrame struct {
-	Command  OutputCommand `json:"c"`
-	GameTime int           `json:"t"`
-	Data     []Entity      `json:"e"`
+// Server -> Client (Output)
+type Frame struct {
+	Command FrameType   `json:"c"`
+	Data    interface{} `json:"d"`
 }
 
-type DeltaFrame struct {
-	Command  OutputCommand `json:"c"`
-	GameTime int           `json:"t"`
-	Data     Entity        `json:"e"`
+type ListOutputData struct {
+	Name    string `json:"n"`
+	Limit   int    `json:"l"`
+	Current int    `json:"c"`
+	Private bool   `json:"p"`
 }
 
-type InputFrame struct {
-	Command InputCommand    `json:"c"`
+type SyncOutputData struct {
+	Players  []*Client `json:"p"`
+	Entities []*Entity `json:"e"`
+}
+
+type DeltaOutputData interface{}
+
+type JoinOutputData struct {
+	Id   int  `json:"i"`
+	Host bool `json:"h"`
+}
+
+// Client -> Server (Input)
+type Command struct {
+	Command CommandType     `json:"c"`
 	Data    json.RawMessage `json:"d"`
 }
 
-type JoinInputFrame struct {
-	Name     string `json:"n"`
-	Password string `json:"p"`
+type CreateInputData struct {
+	Name  string  `json:"n"`
+	Limit int     `json:"l"`
+	X     float32 `json:"x"`
+	Y     float32 `json:"y"`
+	Pass  string  `json:"p"`
 }
 
-type ListOutputFrame struct {
-	Command OutputCommand         `json:"c"`
-	Data    []ListOutputFrameData `json:"d"`
+type JoinInputData struct {
+	Name string `json:"n"`
+	Pass string `json:"p"`
 }
 
-type LeaveOutputFrame struct {
-	Command OutputCommand `json:"c"`
+type CollisionInputData struct {
+	EntityA string `json:"a"`
+	EntityB string `json:"b"`
 }
 
-type ListOutputFrameData struct {
-	Name    string `json:"n"`
-	Private int    `json:"p"`
-	Max     int    `json:"m"`
-	Current int    `json:"c"`
-}
+type EntityCreateInputData *Entity
+type EntityModifyInputData *Entity
+type EntityRemoveInputData string
 
-type ErrorOutputFrame struct {
-	Command OutputCommand `json:"c"`
-	Code    int           `json:"id"`
-	Text    string        `json:"text"`
-}
-
-type CreateOutputFrame struct {
-	Command OutputCommand `json:"c"`
-	Data    string        `json:"d"`
-}
-
-type HostOutputFrame struct {
-	Command OutputCommand `json:"c"`
-	Data    string        `json:"d"`
-}
-
-type JoinOutputFrame struct {
-	Command OutputCommand       `json:"c"`
-	Data    JoinOutputFrameData `json:"d"`
-}
-
-type JoinOutputFrameData struct {
-	Id     int     `json:"id"`
-	Width  float32 `json:"w"`
-	Height float32 `json:"h"`
-}
+type PlayerCreateInputData *Client
+type PlayerModifyInputData *Client
+type PlayerRemoveInputData string

@@ -1,177 +1,290 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
+	"strconv"
+	"strings"
 	"sync"
-	"time"
 )
 
 type Game struct {
-	Name       string  // Name of the game
-	Width      float32 // Width of the map
-	Height     float32 // Height of the map
-	MaxPlayers int     // Max number of players for this game
-	GameTime   int     // Not really used
+	name     string
+	password string
 
-	lastId     int                    // Last connected id
-	password   string                 // Password for the game, MD5 hashed
-	deltaStore map[string]*DeltaFrame // Map of all DeltaFrames to be sent out, keyed by Id
-	players    map[int]*Client        // Map of all players, keyed by Id. We don't use an array because this could be really sparse.
+	limit  int
+	height float32
+	width  float32
 
-	joinLock sync.Mutex // Lock when player joins
-	sendLock sync.Mutex // Lock when frames are sent
+	players map[string]*Client
 
-	stop      chan bool // Channel that will recieve data when quitting
-	syncStop  chan bool // Channel for stopping sync frames. Probably not needed any more.
-	deltaStop chan bool // Channel for stopping delta frames
+	// Because we use a single lock,
+	// we can use most calls like they're not async,
+	// making the whole solution a lot nicer to deal with
+	lock sync.Mutex
+
+	lastPlayerId int
 }
 
-// This defines an error that we can send using json
-type GameError struct {
-	Code int    `json:"c"` // Error code
-	Text string `json:"t"` // Error description
+type EntityType int
+
+const (
+	ENTITY_ASTEROID EntityType = 0
+	ENTITY_SHIP                = 1
+	ENTITY_BULLET              = 2
+)
+
+type Entity struct {
+	Type EntityType `json:"t"`
+	Id   string     `json:"id"`
+	X    float32    `json:"x"`
+	Y    float32    `json:"y"`
+	Xv   float32    `json:"xv"`
+	Yv   float32    `json:"yv"`
+	A    float32    `json:"a"`
+	Av   float32    `json:"av"`
 }
 
-func (e *GameError) Error() string {
-	return e.Text
-}
-
-// NOTE: This is actually a gamemanager function
-func (gm *GameManager) NewGame(name string, max int, x, y float32, password string) error {
-	gm.gamesLock.Lock()
-	defer gm.gamesLock.Unlock()
-
-	if _, ok := gm.games[name]; ok {
-		return errors.New("game already exists")
+func (g *Game) SyncFrame(c *Client) {
+	// TODO: This should be in client somewhere
+	if c.game == nil {
+		c.SendError("no game assigned to player")
+		return
 	}
 
-	g := Game{}
-	g.Name = name
-	g.MaxPlayers = max
-	g.Height = x
-	g.Width = y
+	g.lock.Lock()
+	defer g.lock.Unlock()
 
-	g.deltaStore = make(map[string]*DeltaFrame)
-	g.players = make(map[int]*Client)
+	out := Frame{Command: FRAME_GAME_SYNC}
+	temp := SyncOutputData{Entities: nil, Players: nil}
+	pout := make([]*Client, 0)
+	eout := make([]*Entity, 0)
+	for k := range g.players {
+		pout = append(pout, g.players[k])
+		for ek := range g.players[k].entities {
+			eout = append(eout, g.players[k].entities[ek])
+		}
+	}
 
-	g.stop = make(chan bool)
-	g.syncStop = make(chan bool)
-	g.deltaStop = make(chan bool)
+	temp.Players = pout
+	temp.Entities = eout
+	out.Data = temp
 
-	// We have to start with 2 because of some client black magic
-	g.lastId = 2
-
-	gm.games[g.Name] = &g
-	go g.Start()
-
-	return nil
+	c.encoder.Encode(temp)
 }
 
-// It's a private game if the password is empty
+func (g *Game) CreateEntity(e *Entity) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_ENTITY_CREATE}
+	out.Data = e
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+	// TODO: Error checking
+	idParts := strings.SplitN(e.Id, "-", 2)
+	c := g.players[idParts[0]]
+	c.entities[idParts[1]] = e
+}
+
+func (g *Game) ModifyEntity(e *Entity) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_ENTITY_MODIFY}
+	out.Data = e
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+	// TODO: Error checking
+	idParts := strings.SplitN(e.Id, "-", 2)
+	c := g.players[idParts[0]]
+	c.entities[idParts[1]] = e
+}
+
+func (g *Game) RemoveEntity(id string) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_ENTITY_REMOVE}
+	out.Data = id
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+	idParts := strings.SplitN(id, "-", 2)
+	c := g.players[idParts[0]]
+	delete(c.entities, idParts[1])
+}
+
+func (g *Game) CreatePlayer(c *Client) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_PLAYER_CREATE}
+	out.Data = c
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func (g *Game) ModifyPlayer(c *Client) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_PLAYER_MODIFY}
+	out.Data = c
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func (g *Game) RemovePlayer(id string) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: FRAME_GAME_PLAYER_REMOVE}
+	out.Data = id
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func (g *Game) RoundOver() {
+	// TODO: Implement
+}
+
+func (g *Game) Leave(c *Client) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	// TODO: Remove player
+
+	var frames sync.WaitGroup
+	for ek := range c.entities {
+		frames.Add(1)
+		go func() {
+			var players sync.WaitGroup
+			for pk := range g.players {
+				players.Add(1)
+				go func() {
+
+					frames.Done()
+				}()
+			}
+			frames.Done()
+		}()
+	}
+}
+
+func (g *Game) Collision(a, b string) {
+	// TODO: Implement
+}
+
+func (g *Game) DeltaFrame(c FrameType, data *DeltaOutputData) {
+	var wg sync.WaitGroup
+
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	out := Frame{Command: c}
+
+	for k := range g.players {
+		wg.Add(1)
+		go func() {
+			p := g.players[k]
+			p.encoder.Encode(out)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+}
+
+func (g *Game) NextId(c *Client) int {
+	ret := g.lastPlayerId
+	for {
+		ret++
+
+		// 2 is the first available player id - 1 is comp and 0 is temp
+		if ret < 2 {
+			ret = 2
+		}
+
+		if _, ok := g.players[strconv.Itoa(ret)]; !ok {
+			c.Id = ret
+			g.players[strconv.Itoa(ret)] = c
+			break
+		}
+	}
+
+	g.lastPlayerId = ret
+
+	return ret
+}
+
 func (g *Game) Private() bool {
 	return len(g.password) != 0
-}
-
-// Starting a game, we need to start sending sync frames and delta frames
-func (g *Game) Start() {
-	go g.DeltaFrames()
-}
-
-// This command handles sending delta frames
-func (g *Game) DeltaFrames() {
-	deltaTimer := time.Tick(100 * time.Millisecond)
-	for {
-		select {
-		case <-deltaTimer:
-			g.sendLock.Lock()
-			if len(g.deltaStore) > 0 {
-				fmt.Println(g.Name+":", "Delta!")
-
-				frames := make([][]byte, 0)
-
-				for e := range g.deltaStore {
-					data, err := json.Marshal(g.deltaStore[e])
-					if err != nil {
-						continue
-					}
-					frames = append(frames, data)
-				}
-
-				for p := range g.players {
-					for f := range frames {
-						g.players[p].conn.Write(frames[f])
-						g.players[p].conn.Write([]byte("\n"))
-					}
-				}
-
-				// Clear the delta
-				for i := range g.deltaStore {
-					g.deltaStore[i] = nil
-					delete(g.deltaStore, i)
-				}
-			}
-			g.sendLock.Unlock()
-		case <-g.deltaStop:
-			break
-		}
-	}
-}
-
-func (p *Client) Join(name string, pass string) *GameError {
-	// If the game doesn't exist, send an error
-	g, ok := gm.games[name]
-	if !ok {
-		return &GameError{Code: 1, Text: "game doesn't exist"}
-	}
-
-	if g.Private() && g.password == pass {
-		return &GameError{Code: 3, Text: "invalid password"}
-	}
-
-	// If the game is full, send an error
-	if len(g.players) >= g.MaxPlayers {
-		return &GameError{Code: 2, Text: "game full"}
-	}
-
-	g.joinLock.Lock()
-
-	// Start on the lastId inserted
-	nextId := g.lastId
-
-	// This increments nextId until we find one that isn't used
-	// NOTE: This will shit itself if we have more players than int >= 0 can handle
-	// It'll busy loop until someone disconnects.
-	for {
-		if _, ok := g.players[nextId]; !ok && nextId > 1 {
-			break
-		}
-
-		nextId++
-		if nextId < 2 {
-			nextId = 2
-		}
-	}
-
-	g.players[nextId] = p
-	p.Id = nextId
-	g.lastId = nextId + 1
-
-	// The player is now in a game
-	p.Status = STATUS_GAME
-	p.game = g
-
-	// TODO: Join delta frame
-
-	// Join sets the id, so we can use it now
-	send := JoinOutputFrame{Command: FRAME_JOIN_RESPONSE}
-	data := JoinOutputFrameData{Width: g.Width, Height: g.Height, Id: nextId}
-	send.Data = data
-	p.encoder.Encode(send)
-	p.Sync()
-
-	g.joinLock.Unlock()
-
-	return nil
 }

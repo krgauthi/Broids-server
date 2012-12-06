@@ -2,202 +2,108 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
 	"net"
 )
 
-type ClientStatus int
-
-const (
-	STATUS_LOBBY ClientStatus = 1
-	STATUS_GAME               = 2
-)
-
 type Client struct {
-	Name     string
-	Id       int
-	Status   ClientStatus
-	Entities map[string]*Entity
+	conn net.Conn `json:"-"`
 
-	game    *Game
-	conn    net.Conn
-	decoder *json.Decoder
-	encoder *json.Encoder
+	game     *Game              `json:"-"`
+	Id       int                `json:"i"`
+	Name     string             `json:"n"`
+	Score    int                `json:"s"`
+	Color    string             `json:"c"`
+	entities map[string]*Entity `json:"-"`
 
-	quit chan bool
+	encoder *json.Encoder `json:"-"`
+	decoder *json.Decoder `json:"-"`
 }
 
-// This is magic
-func (c *Client) jsonChan() chan InputFrame {
-	j := make(chan InputFrame)
-	go func() {
-		for {
-			var m InputFrame
-			if err := c.decoder.Decode(&m); err == io.EOF {
-				// TODO: End of IO
-				j <- InputFrame{Command: COMMAND_EOF}
-				return
-			} else if err != nil {
-				j <- InputFrame{Command: COMMAND_ERROR}
-				return
-			}
-
-			j <- m
-		}
-	}()
-	return j
+func (c *Client) SendError(err string) {
+	frame := Frame{Command: FRAME_ERROR}
+	frame.Data = err
+	c.encoder.Encode(frame)
 }
 
-func (c *Client) Leave() {
-	// Err reading - remove this player
-	// Clear out entities - this is for GC stuff
-	if c.game != nil {
-		c.game.sendLock.Lock()
-		for i := range c.Entities {
-			e := *c.Entities[i]
-			e.Id = c.Name + "-" + e.Id
-			c.game.deltaStore[c.Entities[i].Id] = &DeltaFrame{Command: COMMAND_ENTITY_REMOVE}
-			// TODO: Copy entity
-			c.Entities[i] = nil
-			delete(c.Entities, i)
-		}
-
-		c.game.players[c.Id] = nil
-		delete(c.game.players, c.Id)
-
-		c.game.sendLock.Unlock()
-		c.game = nil
-		c.Status = STATUS_LOBBY
-
-		fmt.Println("Player left game")
-	}
-
-	// TODO: Leave delta frame
-	out := LeaveOutputFrame{Command: FRAME_LEAVE_RESPONSE}
-	c.encoder.Encode(out)
+func (c *Client) Disconnect() {
+	// TODO: Implement
 }
 
-// Send an error to the client, based on a GameError
-func (c *Client) Error(err *GameError) {
-	c.encoder.Encode(ErrorOutputFrame{Command: FRAME_ERROR, Text: err.Text, Code: err.Code})
-}
-
-func (c *Client) Sync() {
-	c.game.sendLock.Lock()
-
-	fmt.Println(c.game.Name+":", "Sync!")
-	c.game.GameTime++
-	s := SyncFrame{Command: FRAME_SYNC, GameTime: c.game.GameTime}
-
-	// Create a list of all the entities
-	for pid := range c.game.players {
-		p := c.game.players[pid]
-		for eid := range p.Entities {
-			// We dereference so it copies the struct
-			d := *p.Entities[eid]
-			d.Id = d.Id
-			s.Data = append(s.Data, d)
-			fmt.Println(d)
-		}
-	}
-
-	// Prepare the data for sending
-	data, err := json.Marshal(s)
-	if err != nil {
-		// Keep calm and error on
-		return
-	}
-
-	// Send the sync frame to this user
-	c.conn.Write(data)
-	c.conn.Write([]byte("\n"))
-
-	// Clear the delta
-	for i := range c.game.deltaStore {
-		c.game.deltaStore[i] = nil
-		delete(c.game.deltaStore, i)
-	}
-	c.game.sendLock.Unlock()
-}
-
-func (c *Client) Handle() {
-	// TODO: Rewrite this
-
-	j := c.jsonChan()
+func (c *Client) Handle(gm *GameManager) {
+	reallyExit := false
 
 	for {
-		select {
-		case <-c.quit:
-			// TODO: Notify client
+		var command Command
+		err := c.decoder.Decode(&command)
+		if err != nil {
+			c.Disconnect()
 			break
-		case f := <-j:
-			if c.Status == STATUS_GAME {
-				switch f.Command {
-				case COMMAND_EOF, COMMAND_ERROR:
-					// If in a game, on error, leave the game and close the connection
-					c.Leave()
-					c.conn.Close()
-				case COMMAND_ENTITY_CREATE, COMMAND_ENTITY_REMOVE, COMMAND_ENTITY_UPDATE:
-					// Anything that would generate a delta frame
-					temp := DeltaFrame{}
-					temp.Command = OutputCommand(f.Command)
-					json.Unmarshal(f.Data, &temp.Data)
-					c.game.sendLock.Lock()
+		}
 
-					// Update or remove?
-					switch f.Command {
-					case COMMAND_ENTITY_CREATE, COMMAND_ENTITY_UPDATE:
-						fmt.Println("Create/Update")
-						ent := Entity(temp.Data)
-						c.Entities[temp.Data.Id] = &ent
-					case COMMAND_ENTITY_REMOVE:
-						fmt.Println("Delete")
-						delete(c.Entities, temp.Data.Id)
-					}
-					c.game.deltaStore[temp.Data.Id] = &temp
+		switch command.Command {
+		case COMMAND_LOBBY_CREATE:
+			var in CreateInputData
+			json.Unmarshal(command.Data, &in)
+			gm.NewGame(c, in.Name, in.Limit, in.X, in.Y, in.Pass)
+		case COMMAND_LOBBY_JOIN:
+			var in JoinInputData
+			json.Unmarshal(command.Data, &in)
+			gm.JoinGame(c, in.Name, in.Pass)
+		case COMMAND_LOBBY_LIST:
+			gm.ListGames(c)
+		}
 
-					c.game.sendLock.Unlock()
-				case COMMAND_PLAYER_CREATE, COMMAND_PLAYER_REMOVE:
-
-				case COMMAND_SYNC_REQUEST:
-					c.Sync()
-				case COMMAND_LEAVE:
-					c.Leave()
+		if c.game != nil {
+			for {
+				err = c.decoder.Decode(&command)
+				if err != nil {
+					c.game.RemovePlayer(string(c.Id))
+					// TODO: Make sure all entities are taken care of
+					c.Disconnect()
+					reallyExit = true
+					break
 				}
-			} else {
-				switch f.Command {
-				case COMMAND_EOF:
-					c.conn.Close()
-				case COMMAND_JOIN:
-					temp := JoinInputFrame{}
-					json.Unmarshal(f.Data, &temp)
 
-					// Join the game
-					err := c.Join(temp.Name, temp.Password)
-					if err != nil {
-						c.Error(err)
-					}
-				case COMMAND_LIST:
-					temp := ListOutputFrame{Command: COMMAND_LIST}
-					temp.Data = make([]ListOutputFrameData, 0)
-					for k := range gm.games {
-						game := gm.games[k]
-						var priv int
-						if game.Private() {
-							priv = 1
-						}
-
-						temp.Data = append(temp.Data, ListOutputFrameData{
-							Name:    game.Name,
-							Current: len(game.players),
-							Max:     game.MaxPlayers,
-							Private: priv},
-						)
-					}
-					c.encoder.Encode(temp)
+				switch command.Command {
+				case COMMAND_GAME_LEAVE:
+					c.game.Leave(c)
+					break
+				case COMMAND_GAME_ENTITY_CREATE:
+					var in EntityCreateInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.CreateEntity(in)
+				case COMMAND_GAME_ENTITY_MODIFY:
+					var in EntityModifyInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.ModifyEntity(in)
+				case COMMAND_GAME_ENTITY_REMOVE:
+					var in EntityRemoveInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.RemoveEntity(string(in))
+				case COMMAND_GAME_COLLISION:
+					var in CollisionInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.Collision(in.EntityA, in.EntityB)
+				case COMMAND_GAME_PLAYER_CREATE:
+					var in PlayerCreateInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.CreatePlayer(in)
+				case COMMAND_GAME_PLAYER_MODIFY:
+					var in PlayerModifyInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.ModifyPlayer(in)
+				case COMMAND_GAME_PLAYER_REMOVE:
+					var in PlayerRemoveInputData
+					json.Unmarshal(command.Data, &in)
+					c.game.RemovePlayer(string(in))
+				case COMMAND_GAME_ROUND_OVER:
+					c.game.RoundOver()
 				}
 			}
+		}
+
+		if reallyExit {
+			break
 		}
 	}
 }
