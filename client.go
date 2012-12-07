@@ -14,6 +14,7 @@ type Client struct {
 	Name     string            `json:"n"`
 	Score    int               `json:"s"`
 	Color    string            `json:"c"`
+	Host     bool              `json:"h"`
 	entities map[string]Entity `json:"-"`
 
 	encoder *json.Encoder `json:"-"`
@@ -89,6 +90,7 @@ func (c *Client) Handle(gm *GameManager) {
 					fmt.Println("ENTITY REMOVE")
 					var in EntityRemoveInputData
 					json.Unmarshal(command.Data, &in)
+					fmt.Println(in)
 					c.game.RemoveEntity(string(in))
 				case COMMAND_GAME_COLLISION:
 					fmt.Println("BOOM")

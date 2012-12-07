@@ -53,6 +53,8 @@ type Frame struct {
 	Data    interface{} `json:"d"`
 }
 
+type PlayerCreateOutputData *Client
+
 type ListOutputData struct {
 	Name    string `json:"n"`
 	Limit   int    `json:"l"`

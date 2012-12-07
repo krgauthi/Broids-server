@@ -47,20 +47,20 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_LOBBY_JOIN}
-	temp := JoinOutputData{Id: g.NextId(c), Host: false}
-
 	c.entities = make(map[string]Entity)
 
-	// TODO: Send newplayer to everyone else
+	c.Id = g.NextId(c)
+	c.Host = false
 
 	// TODO: Handle host on disconnect
 	if g.PlayerCount() == 1 {
-		temp.Host = true
+		c.Host = true
 	}
+	out := Frame{Command: FRAME_GAME_PLAYER_CREATE}
+	out.Data = c
 
-	out.Data = temp
-
+	c.encoder.Encode(out)
+	out.Command = FRAME_LOBBY_JOIN
 	c.encoder.Encode(out)
 
 	fmt.Println(temp)
@@ -117,7 +117,7 @@ func (gm *GameManager) ListGames(c *Client) {
 	list := make([]ListOutputData, 0)
 	for k := range gm.games {
 		cur := gm.games[k]
-		out := ListOutputData{Name: cur.name, Limit: cur.limit, Current: len(cur.players), Private: cur.Private()}
+		out := ListOutputData{Name: cur.name, Limit: cur.limit, Current: cur.PlayerCount(), Private: cur.Private()}
 		list = append(list, out)
 	}
 	temp.Data = list
