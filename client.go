@@ -2,18 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 )
 
 type Client struct {
 	conn net.Conn `json:"-"`
 
-	game     *Game              `json:"-"`
-	Id       int                `json:"i"`
-	Name     string             `json:"n"`
-	Score    int                `json:"s"`
-	Color    string             `json:"c"`
-	entities map[string]*Entity `json:"-"`
+	game     *Game             `json:"-"`
+	Id       int               `json:"i"`
+	Name     string            `json:"n"`
+	Score    int               `json:"s"`
+	Color    string            `json:"c"`
+	entities map[string]Entity `json:"-"`
 
 	encoder *json.Encoder `json:"-"`
 	decoder *json.Decoder `json:"-"`
@@ -61,6 +62,7 @@ func (c *Client) Handle(gm *GameManager) {
 			for {
 				err = c.decoder.Decode(&command)
 				if err != nil {
+					fmt.Println("BYE")
 					c.game.RemovePlayer(string(c.Id))
 					c.Disconnect()
 					reallyExit = true
@@ -69,21 +71,27 @@ func (c *Client) Handle(gm *GameManager) {
 
 				switch command.Command {
 				case COMMAND_GAME_LEAVE:
+					fmt.Println("LEAVE")
 					c.game.Leave(c)
 					break
 				case COMMAND_GAME_ENTITY_CREATE:
+					fmt.Println("ENTITY CREATE")
 					var in EntityCreateInputData
 					json.Unmarshal(command.Data, &in)
-					c.game.CreateEntity(in)
+					fmt.Println(in)
+					c.game.CreateEntity(Entity(in))
 				case COMMAND_GAME_ENTITY_MODIFY:
+					fmt.Println("ENTITY MODIFY")
 					var in EntityModifyInputData
 					json.Unmarshal(command.Data, &in)
-					c.game.ModifyEntity(in)
+					c.game.ModifyEntity(Entity(in))
 				case COMMAND_GAME_ENTITY_REMOVE:
+					fmt.Println("ENTITY REMOVE")
 					var in EntityRemoveInputData
 					json.Unmarshal(command.Data, &in)
 					c.game.RemoveEntity(string(in))
 				case COMMAND_GAME_COLLISION:
+					fmt.Println("BOOM")
 					var in CollisionInputData
 					json.Unmarshal(command.Data, &in)
 					c.game.Collision(in.EntityA, in.EntityB)

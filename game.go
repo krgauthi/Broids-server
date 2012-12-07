@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	//"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,14 +51,15 @@ func (g *Game) SyncFrame(c *Client) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_SYNC}
+	out := &Frame{Command: FRAME_GAME_SYNC}
 	temp := SyncOutputData{Entities: nil, Players: nil}
 	pout := make([]*Client, 0)
 	eout := make([]*Entity, 0)
 	for k := range g.players {
 		pout = append(pout, g.players[k])
 		for ek := range g.players[k].entities {
-			eout = append(eout, g.players[k].entities[ek])
+			temp := g.players[k].entities[ek]
+			eout = append(eout, &temp)
 		}
 	}
 
@@ -67,25 +70,34 @@ func (g *Game) SyncFrame(c *Client) {
 	c.encoder.Encode(temp)
 }
 
-func (g *Game) CreateEntity(e *Entity) {
+func (g *Game) SendFrame(f *Frame) {
 	var wg sync.WaitGroup
+	for k := range g.players {
+		if k != "1" {
+			wg.Add(1)
+			go func() {
+				p := g.players[k]
+				fmt.Println(p.Id)
+				//p.encoder.Encode(f)
+				wg.Done()
+			}()
+		}
+	}
+
+	//os.Exit(1)
+
+	wg.Wait()
+}
+
+func (g *Game) CreateEntity(e Entity) {
 
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_ENTITY_CREATE}
+	out := &Frame{Command: FRAME_GAME_ENTITY_CREATE}
 	out.Data = e
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 
 	// TODO: Error checking
 	idParts := strings.SplitN(e.Id, "-", 2)
@@ -93,25 +105,14 @@ func (g *Game) CreateEntity(e *Entity) {
 	c.entities[idParts[1]] = e
 }
 
-func (g *Game) ModifyEntity(e *Entity) {
-	var wg sync.WaitGroup
-
+func (g *Game) ModifyEntity(e Entity) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_ENTITY_MODIFY}
+	out := &Frame{Command: FRAME_GAME_ENTITY_MODIFY}
 	out.Data = e
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 
 	// TODO: Error checking
 	idParts := strings.SplitN(e.Id, "-", 2)
@@ -120,111 +121,57 @@ func (g *Game) ModifyEntity(e *Entity) {
 }
 
 func (g *Game) RemoveEntity(id string) {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_ENTITY_REMOVE}
+	out := &Frame{Command: FRAME_GAME_ENTITY_REMOVE}
 	out.Data = id
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 
 	idParts := strings.SplitN(id, "-", 2)
 	c := g.players[idParts[0]]
+	fmt.Println(id)
 	delete(c.entities, idParts[1])
 }
 
 func (g *Game) CreatePlayer(c *Client) {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_PLAYER_CREATE}
+	out := &Frame{Command: FRAME_GAME_PLAYER_CREATE}
 	out.Data = c
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 }
 
 func (g *Game) ModifyPlayer(c *Client) {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_PLAYER_MODIFY}
+	out := &Frame{Command: FRAME_GAME_PLAYER_MODIFY}
 	out.Data = c
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 }
 
 func (g *Game) RemovePlayer(id string) {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_PLAYER_REMOVE}
+	out := &Frame{Command: FRAME_GAME_PLAYER_REMOVE}
 	out.Data = id
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 }
 
 func (g *Game) RoundOver() {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_ROUND_OVER}
+	out := &Frame{Command: FRAME_GAME_ROUND_OVER}
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 }
 
 func (g *Game) Leave(c *Client) {
@@ -238,18 +185,10 @@ func (g *Game) Leave(c *Client) {
 	var frames sync.WaitGroup
 	for ek := range c.entities {
 		frames.Add(1)
+		out := &Frame{Command: FRAME_GAME_LEAVE}
+		out.Data = c.entities[ek].Id
 		go func() {
-			var players sync.WaitGroup
-			for pk := range g.players {
-				players.Add(1)
-				go func() {
-					out := &Frame{Command: FRAME_GAME_LEAVE}
-					out.Data = c.entities[ek].Id
-					g.players[pk].encoder.Encode(out)
-					frames.Done()
-				}()
-			}
-			players.Wait()
+			g.SendFrame(out)
 			frames.Done()
 		}()
 	}
@@ -258,46 +197,27 @@ func (g *Game) Leave(c *Client) {
 }
 
 func (g *Game) Collision(a, b string) {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: FRAME_GAME_COLLISION}
+	out := &Frame{Command: FRAME_GAME_COLLISION}
 	d := CollisionOutputData{EntityA: a, EntityB: b}
 	out.Data = d
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	g.SendFrame(out)
 }
 
 func (g *Game) DeltaFrame(c FrameType, data *DeltaOutputData) {
-	var wg sync.WaitGroup
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	out := Frame{Command: c}
+	out := &Frame{Command: c}
 
-	for k := range g.players {
-		wg.Add(1)
-		go func() {
-			p := g.players[k]
-			p.encoder.Encode(out)
-			wg.Done()
-		}()
-	}
+	g.SendFrame(out)
+}
 
-	wg.Wait()
-
+func (g *Game) PlayerCount() int {
+	return len(g.players) - 1
 }
 
 func (g *Game) NextId(c *Client) int {

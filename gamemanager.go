@@ -39,7 +39,7 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 		return
 	}
 
-	if len(g.players) >= g.limit {
+	if g.PlayerCount() >= g.limit {
 		c.SendError("game is full")
 		return
 	}
@@ -50,8 +50,12 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 	out := Frame{Command: FRAME_LOBBY_JOIN}
 	temp := JoinOutputData{Id: g.NextId(c), Host: false}
 
+	c.entities = make(map[string]Entity)
+
+	// TODO: Send newplayer to everyone else
+
 	// TODO: Handle host on disconnect
-	if len(g.players) == 1 {
+	if g.PlayerCount() == 1 {
 		temp.Host = true
 	}
 
@@ -59,9 +63,10 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 
 	c.encoder.Encode(out)
 
+	fmt.Println(temp)
+
 	g.players[strconv.Itoa(temp.Id)] = c
 	c.game = g
-	c.entities = make(map[string]*Entity)
 }
 
 func (gm *GameManager) NewGame(c *Client, name string, limit int, x, y float32, pass string) {
@@ -75,6 +80,8 @@ func (gm *GameManager) NewGame(c *Client, name string, limit int, x, y float32, 
 	g.limit = limit
 	g.height = x
 	g.width = y
+
+	g.players["1"] = &Client{Id: 1, entities: make(map[string]Entity)}
 
 	gm.gamesLock.Lock()
 	defer gm.gamesLock.Unlock()
@@ -128,7 +135,7 @@ func (gm *GameManager) StartGameCleaner() {
 		gm.gamesLock.Lock()
 		for k := range gm.games {
 			g := gm.games[k]
-			if len(g.players) == 0 {
+			if g.PlayerCount() == 0 {
 				fmt.Println("Removing game for inactivity")
 				delete(gm.games, k)
 			}

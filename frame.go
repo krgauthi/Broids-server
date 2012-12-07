@@ -103,8 +103,8 @@ type CollisionInputData struct {
 	EntityB string `json:"b"`
 }
 
-type EntityCreateInputData *Entity
-type EntityModifyInputData *Entity
+type EntityCreateInputData Entity
+type EntityModifyInputData Entity
 type EntityRemoveInputData string
 
 type PlayerCreateInputData *Client
