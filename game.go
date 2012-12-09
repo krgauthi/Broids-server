@@ -83,8 +83,6 @@ func (g *Game) SendFrame(f *Frame) {
 		}
 	}
 
-	//os.Exit(1)
-
 	wg.Wait()
 }
 
