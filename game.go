@@ -73,12 +73,11 @@ func (g *Game) SyncFrame(c *Client) {
 func (g *Game) SendFrame(f *Frame) {
 	var wg sync.WaitGroup
 	for k := range g.players {
-		if k != "1" {
+		p := g.players[k]
+		if p.encoder != nil {
 			wg.Add(1)
 			go func() {
-				p := g.players[k]
-				fmt.Println(p.Id)
-				//p.encoder.Encode(f)
+				p.encoder.Encode(f)
 				wg.Done()
 			}()
 		}
@@ -90,9 +89,10 @@ func (g *Game) SendFrame(f *Frame) {
 }
 
 func (g *Game) CreateEntity(e Entity) {
-
 	g.lock.Lock()
 	defer g.lock.Unlock()
+
+	fmt.Println(g.name, "new entity", e.Id)
 
 	out := &Frame{Command: FRAME_GAME_ENTITY_CREATE}
 	out.Data = e
@@ -109,6 +109,8 @@ func (g *Game) ModifyEntity(e Entity) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	fmt.Println(g.name, "modify entity", e.Id)
+
 	out := &Frame{Command: FRAME_GAME_ENTITY_MODIFY}
 	out.Data = e
 
@@ -124,6 +126,8 @@ func (g *Game) RemoveEntity(id string) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	fmt.Println(g.name, "delete entity", id)
+
 	out := &Frame{Command: FRAME_GAME_ENTITY_REMOVE}
 	out.Data = id
 
@@ -131,13 +135,14 @@ func (g *Game) RemoveEntity(id string) {
 
 	idParts := strings.SplitN(id, "-", 2)
 	c := g.players[idParts[0]]
-	fmt.Println(id)
 	delete(c.entities, idParts[1])
 }
 
 func (g *Game) CreatePlayer(c *Client) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
+
+	fmt.Println(g.name, "new player", c.Id)
 
 	out := &Frame{Command: FRAME_GAME_PLAYER_CREATE}
 	out.Data = c
@@ -149,6 +154,8 @@ func (g *Game) ModifyPlayer(c *Client) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	fmt.Println(g.name, "modify player", c.Id)
+
 	out := &Frame{Command: FRAME_GAME_PLAYER_MODIFY}
 	out.Data = c
 
@@ -158,6 +165,8 @@ func (g *Game) ModifyPlayer(c *Client) {
 func (g *Game) RemovePlayer(id string) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
+
+	fmt.Println(g.name, "remove player", id)
 
 	out := &Frame{Command: FRAME_GAME_PLAYER_REMOVE}
 	out.Data = id
@@ -169,6 +178,8 @@ func (g *Game) RoundOver() {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	fmt.Println(g.name, "round over")
+
 	out := &Frame{Command: FRAME_GAME_ROUND_OVER}
 
 	g.SendFrame(out)
@@ -177,6 +188,8 @@ func (g *Game) RoundOver() {
 func (g *Game) Leave(c *Client) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
+
+	fmt.Println(g.name, "player leaves:", c.Name)
 
 	if _, ok := g.players[strconv.Itoa(c.Id)]; ok {
 		delete(g.players, strconv.Itoa(c.Id))
@@ -199,6 +212,8 @@ func (g *Game) Leave(c *Client) {
 func (g *Game) Collision(a, b string) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
+
+	fmt.Println(g.name, "collision:", a, b)
 
 	out := &Frame{Command: FRAME_GAME_COLLISION}
 	d := CollisionOutputData{EntityA: a, EntityB: b}

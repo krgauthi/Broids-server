@@ -63,9 +63,7 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 	out.Command = FRAME_LOBBY_JOIN
 	c.encoder.Encode(out)
 
-	fmt.Println(temp)
-
-	g.players[strconv.Itoa(temp.Id)] = c
+	g.players[strconv.Itoa(c.Id)] = c
 	c.game = g
 }
 

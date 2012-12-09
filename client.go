@@ -60,10 +60,11 @@ func (c *Client) Handle(gm *GameManager) {
 		}
 
 		if c.game != nil {
+			fmt.Println(c.game.name, "player joins:", c.Name)
 			for {
 				err = c.decoder.Decode(&command)
 				if err != nil {
-					fmt.Println("BYE")
+					fmt.Println(c.game.name, "player disconnected:", c.Name)
 					c.game.RemovePlayer(string(c.Id))
 					c.Disconnect()
 					reallyExit = true
@@ -72,28 +73,21 @@ func (c *Client) Handle(gm *GameManager) {
 
 				switch command.Command {
 				case COMMAND_GAME_LEAVE:
-					fmt.Println("LEAVE")
 					c.game.Leave(c)
 					break
 				case COMMAND_GAME_ENTITY_CREATE:
-					fmt.Println("ENTITY CREATE")
 					var in EntityCreateInputData
 					json.Unmarshal(command.Data, &in)
-					fmt.Println(in)
 					c.game.CreateEntity(Entity(in))
 				case COMMAND_GAME_ENTITY_MODIFY:
-					fmt.Println("ENTITY MODIFY")
 					var in EntityModifyInputData
 					json.Unmarshal(command.Data, &in)
 					c.game.ModifyEntity(Entity(in))
 				case COMMAND_GAME_ENTITY_REMOVE:
-					fmt.Println("ENTITY REMOVE")
 					var in EntityRemoveInputData
 					json.Unmarshal(command.Data, &in)
-					fmt.Println(in)
 					c.game.RemoveEntity(string(in))
 				case COMMAND_GAME_COLLISION:
-					fmt.Println("BOOM")
 					var in CollisionInputData
 					json.Unmarshal(command.Data, &in)
 					c.game.Collision(in.EntityA, in.EntityB)
