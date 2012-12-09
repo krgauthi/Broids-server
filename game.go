@@ -35,14 +35,15 @@ const (
 )
 
 type Entity struct {
-	Type EntityType `json:"t"`
-	Id   string     `json:"id"`
-	X    float32    `json:"x"`
-	Y    float32    `json:"y"`
-	Xv   float32    `json:"xv"`
-	Yv   float32    `json:"yv"`
-	A    float32    `json:"a"`
-	Av   float32    `json:"av"`
+	Type  EntityType `json:"t"`
+	Id    string     `json:"id"`
+	X     float32    `json:"x"`
+	Y     float32    `json:"y"`
+	Xv    float32    `json:"xv"`
+	Yv    float32    `json:"yv"`
+	A     float32    `json:"a"`
+	Av    float32    `json:"av"`
+	Extra int        `json:"e"`
 }
 
 // TODO: Send HOST change when needed

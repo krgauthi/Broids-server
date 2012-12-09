@@ -15,7 +15,7 @@ func main() {
 	}
 
 	// Testing stuff
-	m.NewGame(nil, "broids", 5, 100.0, 160.0, "test")
+	m.NewGame(nil, "broids", 5, 100.0, 160.0, "")
 
 	// Handle new connections
 	m.Listen()

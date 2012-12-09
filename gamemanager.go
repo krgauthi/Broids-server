@@ -27,7 +27,7 @@ func StartGameManager(bind string) *GameManager {
 
 	gm.games = make(map[string]*Game)
 
-	go gm.StartGameCleaner()
+	// go gm.StartGameCleaner()
 
 	return gm
 }
@@ -39,13 +39,13 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 		return
 	}
 
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
 	if g.PlayerCount() >= g.limit {
 		c.SendError("game is full")
 		return
 	}
-
-	g.lock.Lock()
-	defer g.lock.Unlock()
 
 	c.entities = make(map[string]Entity)
 
@@ -56,11 +56,12 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 	if g.PlayerCount() == 1 {
 		c.Host = true
 	}
-	out := Frame{Command: FRAME_GAME_PLAYER_CREATE}
-	out.Data = c
 
-	c.encoder.Encode(out)
+	out := &Frame{Command: FRAME_GAME_PLAYER_CREATE, Data: c}
+	g.SendFrame(out)
+
 	out.Command = FRAME_LOBBY_JOIN
+	out.Data = JoinOutputData{Id: c.Id, Host: c.Host, X: g.width, Y: g.height}
 	c.encoder.Encode(out)
 
 	g.players[strconv.Itoa(c.Id)] = c
