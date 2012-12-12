@@ -36,8 +36,7 @@ func (c *Client) Disconnect() {
 }
 
 func (c *Client) Handle(gm *GameManager) {
-	reallyExit := false
-
+	// Protocol version
 	{
 		var com Command
 		var version int
@@ -67,11 +66,13 @@ func (c *Client) Handle(gm *GameManager) {
 		}
 	}
 
-	for {
+	connected := true
+	for connected {
 		var command Command
 		err := c.decoder.Decode(&command)
 		if err != nil {
 			c.Disconnect()
+			connected = false
 			break
 		}
 
@@ -90,19 +91,22 @@ func (c *Client) Handle(gm *GameManager) {
 
 		if c.game != nil {
 			fmt.Println(c.game.name, "player joins:", c.Name)
-			for {
+			inGame := true
+			for inGame {
 				err = c.decoder.Decode(&command)
 				if err != nil {
 					fmt.Println(c.game.name, "player disconnected:", c.Name)
 					c.game.RemovePlayer(string(c.Id))
 					c.Disconnect()
-					reallyExit = true
+					connected = false
+					inGame = false
 					break
 				}
 
 				switch command.Command {
 				case COMMAND_GAME_LEAVE:
 					c.game.Leave(c)
+					inGame = false
 					break
 				case COMMAND_GAME_ENTITY_CREATE:
 					var in EntityCreateInputData
@@ -119,7 +123,7 @@ func (c *Client) Handle(gm *GameManager) {
 				case COMMAND_GAME_COLLISION:
 					var in CollisionInputData
 					json.Unmarshal(command.Data, &in)
-					c.game.Collision(in.EntityA, in.EntityB)
+					c.game.Collision(in.EntityA, in.APoints, in.EntityB, in.BPoints)
 				case COMMAND_GAME_PLAYER_CREATE:
 					var in PlayerCreateInputData
 					json.Unmarshal(command.Data, &in)
@@ -136,10 +140,8 @@ func (c *Client) Handle(gm *GameManager) {
 					c.game.RoundOver()
 				}
 			}
-		}
 
-		if reallyExit {
-			break
+			c.game = nil
 		}
 	}
 }

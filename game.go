@@ -49,9 +49,6 @@ type Entity struct {
 // TODO: Send HOST change when needed
 
 func (g *Game) SyncFrame(c *Client) {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-
 	out := &Frame{Command: FRAME_GAME_SYNC}
 	temp := SyncOutputData{Entities: nil, Players: nil}
 	pout := make([]*Client, 0)
@@ -68,7 +65,7 @@ func (g *Game) SyncFrame(c *Client) {
 	temp.Entities = eout
 	out.Data = temp
 
-	c.encoder.Encode(temp)
+	c.encoder.Encode(out)
 }
 
 func (g *Game) SendFrame(f *Frame) {
@@ -78,7 +75,6 @@ func (g *Game) SendFrame(f *Frame) {
 		if p.encoder != nil {
 			wg.Add(1)
 			go func() {
-				fmt.Println(k)
 				p.encoder.Encode(f)
 				wg.Done()
 			}()
@@ -102,8 +98,6 @@ func (g *Game) CreateEntity(e Entity) {
 	// TODO: Error checking
 	idParts := strings.SplitN(e.Id, "-", 2)
 	c := g.players[idParts[0]]
-	fmt.Printf("%+v\n", c)
-	fmt.Printf("%+v\n", e)
 	c.entities[idParts[1]] = e
 }
 
@@ -200,25 +194,27 @@ func (g *Game) Leave(c *Client) {
 	var frames sync.WaitGroup
 	for ek := range c.entities {
 		frames.Add(1)
-		out := &Frame{Command: FRAME_GAME_LEAVE}
+		out := &Frame{Command: FRAME_GAME_ENTITY_REMOVE}
 		out.Data = c.entities[ek].Id
 		go func() {
 			g.SendFrame(out)
 			frames.Done()
 		}()
 	}
-
 	frames.Wait()
+
+	leave := &Frame{Command: FRAME_GAME_LEAVE}
+	c.encoder.Encode(leave)
 }
 
-func (g *Game) Collision(a, b string) {
+func (g *Game) Collision(a string, ap int, b string, bp int) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
 	fmt.Println(g.name, "collision:", a, b)
 
 	out := &Frame{Command: FRAME_GAME_COLLISION}
-	d := CollisionOutputData{EntityA: a, EntityB: b}
+	d := CollisionOutputData{EntityA: a, APoints: ap, EntityB: b, BPoints: bp}
 	out.Data = d
 
 	g.SendFrame(out)

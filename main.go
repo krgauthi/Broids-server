@@ -6,7 +6,7 @@ import (
 )
 
 func protocolVersion() int {
-	return 1
+	return 2
 }
 
 func main() {

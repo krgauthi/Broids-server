@@ -61,6 +61,8 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 	out2.Data = JoinOutputData{Id: c.Id, Host: c.Host, X: g.width, Y: g.height}
 	c.encoder.Encode(out2)
 
+	g.SyncFrame(c)
+
 	out := &Frame{Command: FRAME_GAME_PLAYER_CREATE, Data: c}
 	g.SendFrame(out)
 
