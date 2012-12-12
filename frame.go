@@ -71,8 +71,10 @@ type SyncOutputData struct {
 
 type CollisionOutputData struct {
 	EntityA string `json:"a"`
+	AType   int    `json:"at"`
 	APoints int    `json:"ap"`
 	EntityB string `json:"b"`
+	BType   int    `json:"bt"`
 	BPoints int    `json:"bp"`
 }
 
@@ -106,8 +108,10 @@ type JoinInputData struct {
 
 type CollisionInputData struct {
 	EntityA string `json:"a"`
+	AType   int    `json:"at"`
 	APoints int    `json:"ap"`
 	EntityB string `json:"b"`
+	BType   int    `json:"bt"`
 	BPoints int    `json:"bp"`
 }
 

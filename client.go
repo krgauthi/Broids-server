@@ -123,7 +123,7 @@ func (c *Client) Handle(gm *GameManager) {
 				case COMMAND_GAME_COLLISION:
 					var in CollisionInputData
 					json.Unmarshal(command.Data, &in)
-					c.game.Collision(in.EntityA, in.APoints, in.EntityB, in.BPoints)
+					c.game.Collision(in.EntityA, in.APoints, in.AType, in.EntityB, in.BType, in.BPoints)
 				case COMMAND_GAME_PLAYER_CREATE:
 					var in PlayerCreateInputData
 					json.Unmarshal(command.Data, &in)

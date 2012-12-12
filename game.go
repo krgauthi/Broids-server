@@ -207,14 +207,14 @@ func (g *Game) Leave(c *Client) {
 	c.encoder.Encode(leave)
 }
 
-func (g *Game) Collision(a string, ap int, b string, bp int) {
+func (g *Game) Collision(a string, ap int, at int, b string, bp int, bt int) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
 	fmt.Println(g.name, "collision:", a, b)
 
 	out := &Frame{Command: FRAME_GAME_COLLISION}
-	d := CollisionOutputData{EntityA: a, APoints: ap, EntityB: b, BPoints: bp}
+	d := CollisionOutputData{EntityA: a, AType: at, APoints: ap, EntityB: b, BType: bt, BPoints: bp}
 	out.Data = d
 
 	g.SendFrame(out)
