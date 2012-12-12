@@ -57,12 +57,12 @@ func (gm *GameManager) JoinGame(c *Client, name, pass string) {
 		c.Host = true
 	}
 
+	out2 := &Frame{Command: FRAME_LOBBY_JOIN, Data: c}
+	out2.Data = JoinOutputData{Id: c.Id, Host: c.Host, X: g.width, Y: g.height}
+	c.encoder.Encode(out2)
+
 	out := &Frame{Command: FRAME_GAME_PLAYER_CREATE, Data: c}
 	g.SendFrame(out)
-
-	out.Command = FRAME_LOBBY_JOIN
-	out.Data = JoinOutputData{Id: c.Id, Host: c.Host, X: g.width, Y: g.height}
-	c.encoder.Encode(out)
 
 	g.players[strconv.Itoa(c.Id)] = c
 	c.game = g

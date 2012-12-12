@@ -38,6 +38,35 @@ func (c *Client) Disconnect() {
 func (c *Client) Handle(gm *GameManager) {
 	reallyExit := false
 
+	{
+		var com Command
+		var version int
+		f := Frame{Command: FRAME_HANDSHAKE, Data: 0}
+		err := c.decoder.Decode(&com)
+		if err != nil {
+			c.encoder.Encode(f)
+			c.conn.Close()
+			return
+		}
+
+		if com.Command != COMMAND_HANDSHAKE {
+			c.encoder.Encode(f)
+			c.conn.Close()
+			return
+		}
+
+		json.Unmarshal(com.Data, &version)
+
+		if version != protocolVersion() {
+			c.encoder.Encode(f)
+			c.conn.Close()
+			return
+		} else {
+			f.Data = 1
+			c.encoder.Encode(f)
+		}
+	}
+
 	for {
 		var command Command
 		err := c.decoder.Decode(&command)

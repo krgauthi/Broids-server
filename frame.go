@@ -26,6 +26,7 @@ const (
 	FRAME_LOBBY_LIST   = 20
 	FRAME_LOBBY_CREATE = 21
 	FRAME_LOBBY_JOIN   = 22
+	FRAME_HANDSHAKE    = 23
 )
 
 type CommandType int
@@ -45,6 +46,7 @@ const (
 	COMMAND_LOBBY_LIST   = 20
 	COMMAND_LOBBY_CREATE = 21
 	COMMAND_LOBBY_JOIN   = 22
+	COMMAND_HANDSHAKE    = 23
 )
 
 // Server -> Client (Output)

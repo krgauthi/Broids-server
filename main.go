@@ -2,7 +2,12 @@ package main
 
 import (
 	"fmt"
+	//"strconv"
 )
+
+func protocolVersion() int {
+	return 1
+}
 
 func main() {
 	fmt.Println("Starting Broids Server")
@@ -15,6 +20,9 @@ func main() {
 	}
 
 	// Testing stuff
+	/*for i := 0; i < 13; i++ {
+		m.NewGame(nil, "broids"+strconv.Itoa(i), 5, 100.0, 160.0, "")
+	}*/
 	m.NewGame(nil, "broids", 5, 100.0, 160.0, "")
 
 	// Handle new connections

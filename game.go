@@ -78,6 +78,7 @@ func (g *Game) SendFrame(f *Frame) {
 		if p.encoder != nil {
 			wg.Add(1)
 			go func() {
+				fmt.Println(k)
 				p.encoder.Encode(f)
 				wg.Done()
 			}()
@@ -101,6 +102,8 @@ func (g *Game) CreateEntity(e Entity) {
 	// TODO: Error checking
 	idParts := strings.SplitN(e.Id, "-", 2)
 	c := g.players[idParts[0]]
+	fmt.Printf("%+v\n", c)
+	fmt.Printf("%+v\n", e)
 	c.entities[idParts[1]] = e
 }
 
